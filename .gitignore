@@ -1,10 +1,11 @@
 .DS_Store
 Thumbs.db
 
-# Editor directories
+# Editor / AI tool directories
 .vscode/
 .idea/
 *.iml
+.claude/
 
 # Environment files
 .env
