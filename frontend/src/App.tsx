@@ -64,7 +64,7 @@ export default function App() {
 
   const selectedPreset = useMemo(
     () => presets.find((p) => p.id === selectedPresetId) ?? null,
-    [presets, selectedPresetId]
+    [presets, selectedPresetId],
   );
   const presetDirty = selectedPreset ? !bandsEqual(bands, selectedPreset.bands) : false;
 
@@ -152,33 +152,57 @@ export default function App() {
   // ── Volume ──────────────────────────────────────────────────────────
   const handleVolumeChange = useCallback((v: number) => setVolume(v), []);
   const handleVolumeCommit = useCallback(async (v: number) => {
-    try { await api.setVolume(v); } catch { /* optimistic */ }
+    try {
+      await api.setVolume(v);
+    } catch {
+      /* optimistic */
+    }
   }, []);
 
   // ── Mic Gain ────────────────────────────────────────────────────────
   const handleMicGainCommit = useCallback(async (v: number) => {
     setMicGain(v);
-    try { await api.setMicGain(v); } catch { /* optimistic */ }
+    try {
+      await api.setMicGain(v);
+    } catch {
+      /* optimistic */
+    }
   }, []);
 
   // ── Balance ─────────────────────────────────────────────────────────
   const handleBalanceCommit = useCallback(async (v: number) => {
     setBalance(v);
-    try { await api.setBalance(v); } catch { /* optimistic */ }
+    try {
+      await api.setBalance(v);
+    } catch {
+      /* optimistic */
+    }
   }, []);
 
   // ── Registers ───────────────────────────────────────────────────────
   const handleFilterMode = useCallback(async (v: string) => {
     setFilterMode(v as FilterMode);
-    try { await api.setRegister("filter", v); } catch { /* optimistic */ }
+    try {
+      await api.setRegister("filter", v);
+    } catch {
+      /* optimistic */
+    }
   }, []);
   const handleGainMode = useCallback(async (v: string) => {
     setGainMode(v as GainMode);
-    try { await api.setRegister("gain", v); } catch { /* optimistic */ }
+    try {
+      await api.setRegister("gain", v);
+    } catch {
+      /* optimistic */
+    }
   }, []);
   const handleAmpMode = useCallback(async (v: string) => {
     setAmpMode(v as AmpMode);
-    try { await api.setRegister("amp", v); } catch { /* optimistic */ }
+    try {
+      await api.setRegister("amp", v);
+    } catch {
+      /* optimistic */
+    }
   }, []);
 
   // ── EQ ──────────────────────────────────────────────────────────────
@@ -192,21 +216,32 @@ export default function App() {
     setBands((prev) => prev.map((b, i) => (i === idx ? updated : b)));
     try {
       await api.setEQBand(idx, updated);
-    } catch { /* optimistic */ }
+    } catch {
+      /* optimistic */
+    }
   }, []);
 
   const handleGraphDrag = useCallback((idx: number, freqHz: number, gainDb: number) => {
     setBands((prev) =>
-      prev.map((b, i) => (i === idx ? { ...b, freqHz, gainDb, enabled: gainDb !== 0 ? true : b.enabled } : b))
+      prev.map((b, i) =>
+        i === idx ? { ...b, freqHz, gainDb, enabled: gainDb !== 0 ? true : b.enabled } : b,
+      ),
     );
   }, []);
 
-  const handleGraphCommit = useCallback(async (idx: number, freqHz: number, gainDb: number) => {
-    const enabled = gainDb !== 0 ? true : bands[idx].enabled;
-    const band = { ...bands[idx], freqHz, gainDb, enabled };
-    setBands((prev) => prev.map((b, i) => (i === idx ? band : b)));
-    try { await api.setEQBand(idx, band); } catch { /* optimistic */ }
-  }, [bands]);
+  const handleGraphCommit = useCallback(
+    async (idx: number, freqHz: number, gainDb: number) => {
+      const enabled = gainDb !== 0 ? true : bands[idx].enabled;
+      const band = { ...bands[idx], freqHz, gainDb, enabled };
+      setBands((prev) => prev.map((b, i) => (i === idx ? band : b)));
+      try {
+        await api.setEQBand(idx, band);
+      } catch {
+        /* optimistic */
+      }
+    },
+    [bands],
+  );
 
   // ── Presets ─────────────────────────────────────────────────────────
   // Every preset action funnels through here so the busy flag and the
@@ -239,7 +274,7 @@ export default function App() {
         setPresets((prev) => prev.map((p) => (p.id === res.preset.id ? res.preset : p)));
       });
     },
-    [presets, connected, runPresetAction]
+    [presets, connected, runPresetAction],
   );
 
   const handleSavePresetAs = useCallback(
@@ -250,7 +285,7 @@ export default function App() {
         setSelectedPresetId(created.id);
       });
     },
-    [bands, runPresetAction]
+    [bands, runPresetAction],
   );
 
   const handleUpdatePreset = useCallback(() => {
@@ -270,17 +305,17 @@ export default function App() {
         setPresets((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       });
     },
-    [runPresetAction]
+    [runPresetAction],
   );
 
   const handleRenamePreset = useCallback(
     (id: string, name: string) => patchPreset(id, { name }),
-    [patchPreset]
+    [patchPreset],
   );
 
   const handleRetargetPreset = useCallback(
     (id: string, target: string) => patchPreset(id, { target }),
-    [patchPreset]
+    [patchPreset],
   );
 
   const handleTogglePin = useCallback(
@@ -289,7 +324,7 @@ export default function App() {
       if (!preset) return;
       patchPreset(id, { pinned: !preset.pinned });
     },
-    [presets, patchPreset]
+    [presets, patchPreset],
   );
 
   const handleDuplicatePreset = useCallback(
@@ -302,7 +337,7 @@ export default function App() {
         setPresets((prev) => [...prev, created]);
       });
     },
-    [presets, runPresetAction]
+    [presets, runPresetAction],
   );
 
   const handleDeletePreset = useCallback(
@@ -313,9 +348,8 @@ export default function App() {
         setSelectedPresetId((cur) => (cur === id ? null : cur));
       });
     },
-    [runPresetAction]
+    [runPresetAction],
   );
-
 
   const handleImportPresets = useCallback(
     (items: ImportedPreset[]) => {
@@ -327,7 +361,7 @@ export default function App() {
         setPresets((prev) => [...prev, ...created]);
       });
     },
-    [runPresetAction]
+    [runPresetAction],
   );
 
   const downloadJSON = useCallback((data: unknown, filename: string) => {
@@ -342,17 +376,20 @@ export default function App() {
 
   const handleExportPresets = useCallback(
     () => downloadJSON({ version: 1, presets }, "trn-eq-presets.json"),
-    [presets, downloadJSON]
+    [presets, downloadJSON],
   );
 
   const handleExportOne = useCallback(
     (id: string) => {
       const preset = presets.find((p) => p.id === id);
       if (!preset) return;
-      const slug = preset.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+      const slug = preset.name
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
       downloadJSON({ version: 1, presets: [preset] }, `${slug || "preset"}.json`);
     },
-    [presets, downloadJSON]
+    [presets, downloadJSON],
   );
 
   // ── Flash Save ──────────────────────────────────────────────────────
@@ -505,72 +542,77 @@ export default function App() {
           </section>
         </aside>
 
-        {/* Right area — tabbed content */}
-        <main className="content-area">
+        {/* Right area — tabbed content. The EQ tab splits into an editor
+            pane and an always-visible preset dock on wide screens. */}
+        <main className={`content-area ${tab === "eq" ? "split" : ""}`}>
           {tab === "eq" && (
-            <div className="tab-panel">
-              <section className="panel eq-panel">
-                <div className="panel-head">
-                  <div>
-                    <h2 className="panel-title">Parametric EQ</h2>
-                    <p className="panel-sub">
-                      10 bands · drag a node on the curve, or edit numerically below
-                    </p>
+            <div className="tab-panel eq-workspace">
+              <div className="eq-main">
+                <section className="panel eq-panel">
+                  <div className="panel-head">
+                    <div>
+                      <h2 className="panel-title">Parametric EQ</h2>
+                      <p className="panel-sub">
+                        10 bands · drag a node on the curve, or edit numerically below
+                      </p>
+                    </div>
+                    {selectedPreset && (
+                      <span className={`eq-active-preset ${presetDirty ? "dirty" : ""}`}>
+                        {selectedPreset.name}
+                        {presetDirty && <em> · edited</em>}
+                      </span>
+                    )}
                   </div>
-                  {selectedPreset && (
-                    <span className={`eq-active-preset ${presetDirty ? "dirty" : ""}`}>
-                      {selectedPreset.name}
-                      {presetDirty && <em> · edited</em>}
-                    </span>
-                  )}
-                </div>
-                <div className="eq-stage">
-                  <EQGraph
-                    bands={bands}
-                    activeIndex={activeIdx}
-                    onSelect={setActiveIdx}
-                    onDrag={handleGraphDrag}
-                    onCommit={handleGraphCommit}
-                    disabled={!connected}
-                  />
-                  <VolumeColumn
-                    volume={volume}
-                    bands={bands}
-                    disabled={!connected}
-                    onChange={handleVolumeChange}
-                    onCommit={handleVolumeCommit}
-                  />
-                </div>
-                <div className="band-list-wrap">
-                  <BandList
-                    bands={bands}
-                    activeIndex={activeIdx}
-                    onSelect={setActiveIdx}
-                    onChange={handleBandChange}
-                    onCommit={handleBandCommit}
-                    disabled={!connected}
-                  />
-                </div>
-              </section>
+                  <div className="eq-stage">
+                    <EQGraph
+                      bands={bands}
+                      activeIndex={activeIdx}
+                      onSelect={setActiveIdx}
+                      onDrag={handleGraphDrag}
+                      onCommit={handleGraphCommit}
+                      disabled={!connected}
+                    />
+                    <VolumeColumn
+                      volume={volume}
+                      bands={bands}
+                      disabled={!connected}
+                      onChange={handleVolumeChange}
+                      onCommit={handleVolumeCommit}
+                    />
+                  </div>
+                  <div className="band-list-wrap">
+                    <BandList
+                      bands={bands}
+                      activeIndex={activeIdx}
+                      onSelect={setActiveIdx}
+                      onChange={handleBandChange}
+                      onCommit={handleBandCommit}
+                      disabled={!connected}
+                    />
+                  </div>
+                </section>
+              </div>
 
-              <PresetGallery
-                presets={presets}
-                selectedId={selectedPresetId}
-                dirty={presetDirty}
-                busy={presetBusy}
-                onApply={handleApplyPreset}
-                onSaveCurrent={handleSavePresetAs}
-                onUpdateCurrent={handleUpdatePreset}
-                onRename={handleRenamePreset}
-                onRetarget={handleRetargetPreset}
-                onDuplicate={handleDuplicatePreset}
-                onDelete={handleDeletePreset}
-                onTogglePin={handleTogglePin}
-                onExportOne={handleExportOne}
-                onExportAll={handleExportPresets}
-                onImport={handleImportPresets}
-                onError={setError}
-              />
+              <aside className="preset-dock">
+                <PresetGallery
+                  presets={presets}
+                  selectedId={selectedPresetId}
+                  dirty={presetDirty}
+                  busy={presetBusy}
+                  onApply={handleApplyPreset}
+                  onSaveCurrent={handleSavePresetAs}
+                  onUpdateCurrent={handleUpdatePreset}
+                  onRename={handleRenamePreset}
+                  onRetarget={handleRetargetPreset}
+                  onDuplicate={handleDuplicatePreset}
+                  onDelete={handleDeletePreset}
+                  onTogglePin={handleTogglePin}
+                  onExportOne={handleExportOne}
+                  onExportAll={handleExportPresets}
+                  onImport={handleImportPresets}
+                  onError={setError}
+                />
+              </aside>
             </div>
           )}
 

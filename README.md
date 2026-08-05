@@ -1,227 +1,263 @@
+<div align="center">
+
 # TRN Black Pearl Control Panel
 
-This repository contains a DAC control panel for the TRN Black Pearl / TE-C device. It is built as a React frontend talking to a Go HID sidecar, with a Tauri packaging layer in `src-tauri`.
+**A fast, open-source desktop and mobile control panel for the TRN Black Pearl (TE-C) USB DAC — parametric EQ, preset library, and full device control.**
 
-## Project Overview
+[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)](#installation)
+[![License](https://img.shields.io/badge/license-TBD-inactive)](#license)
 
-- `backend/` - Go sidecar that manages the USB HID device and exposes a localhost HTTP/WebSocket API.
-- `frontend/` - React + Vite UI that consumes the local API and renders controls for volume, balance, mic gain, DAC modes, and a 10-band parametric EQ.
-- `src-tauri/` - Tauri packaging configuration and build script.
-- `req.txt` - early project notes and protocol summary.
+![The parametric EQ editor with the preset library docked alongside it](docs/screenshots/eq-desktop.png)
 
-## Architecture
+</div>
 
-### Backend (`backend/`)
+---
 
-The backend is a Go command-line app in `backend/main.go`.
+## Overview
 
-- Opens the TRN Black Pearl HID device using `github.com/sstallion/go-hid`.
-- Runs `connectLoop` to retry opening the device every 2 seconds until connected.
-- Starts an HTTP server on `127.0.0.1:47823`.
-- Wraps API handlers with permissive CORS so the Tauri webview or local browser can access it.
-- Prints `READY <port>` once the sidecar is listening.
+The TRN Black Pearl is an excellent little USB DAC, but the only way to configure it is a vendor web app that requires an account and an internet connection to change settings on hardware sitting on your desk.
 
-The API handlers are defined in `backend/api/server.go` and expose:
+This project replaces it. It's a self-contained control panel that talks to the DAC directly over USB HID, stores everything locally, and works entirely offline. No account, no telemetry, no cloud.
 
-- `GET /api/status` - connection state and firmware version
-- `POST /api/reconnect` - make one immediate attempt to open the DAC, then return status
-- `GET /api/volume` - current volume
-- `PUT /api/volume` - set volume
-- `GET /api/mic-gain` - current microphone gain
-- `PUT /api/mic-gain` - set microphone gain
-- `GET /api/balance` - current left/right balance
-- `PUT /api/balance` - set balance
-- `GET /api/registers/{filter|gain|amp}` - read DAC register state
-- `PUT /api/registers/{filter|gain|amp}` - set DAC register state
-- `GET /api/eq/{0-9}` - read one EQ band
-- `PUT /api/eq/{0-9}` - write one EQ band
-- `GET /api/presets` - list saved EQ presets
-- `POST /api/presets` - create a preset from a name + 10 bands
-- `GET /api/presets/{id}` - read one preset
-- `PUT /api/presets/{id}` - rename a preset and/or overwrite its bands
-- `DELETE /api/presets/{id}` - delete a preset
-- `POST /api/presets/{id}/apply` - write all 10 bands to the DAC and latch; `{"flash": true}` also persists them
-- `POST /api/latch` - apply pending live changes
-- `POST /api/flash` - persist current settings to flash
-- `GET /api/events` - WebSocket stream for device-originated events
+**Who it's for**
 
-The backend also includes `backend/api/events.go`:
+- Anyone with a TRN Black Pearl / TE-C who wants full control of their device.
+- Listeners who tune by ear or follow measurement-based EQ targets and want a real preset workflow.
+- Tinkerers curious about how these DACs work under the hood.
 
-- Upgrades `/api/events` to a WebSocket.
-- Broadcasts volume change events when the device sends them.
+**Goals**
 
-### HID Protocol (`backend/hidproto/`)
+| | |
+|---|---|
+| **Local first** | Everything runs on your machine. The API binds to loopback only. |
+| **Honest tooling** | Show real information — including when your EQ is about to clip. |
+| **Fast** | Adjust a band, hear it immediately. No round trips to a server. |
+| **Works everywhere** | One responsive interface for desktop, tablet, and phone. |
 
-The HID protocol implementation is in `backend/hidproto/`.
+> [!NOTE]
+> This is an unofficial, community-built project. It is not affiliated with or endorsed by TRN.
 
-- `protocol.go` contains packet framing and command definitions.
-- `device.go` manages the HID connection, a single read loop, caching of responses, and event subscriptions.
-- `peq.go` encodes/decodes parametric EQ band requests and responses.
-- `biquad.go` computes RBJ biquad coefficients matching the hardware DSP.
+---
 
-### Preset Library (`backend/presets/`)
+## Features
 
-The DAC holds only one live PEQ configuration, so the library of named
-presets lives on the host:
+### Available now
 
-- `store.go` is a file-backed, mutex-guarded collection of presets. Every
-  mutation rewrites the whole file through a temp file + rename, so an
-  interrupted write cannot corrupt the library.
-- `band.go` validates and clamps bands before they are stored, so an
-  imported or hand-edited file can never push nonsense into the biquad math.
+**Parametric EQ**
+- 10-band parametric EQ with peaking, low-shelf, and high-shelf filters
+- Drag control points directly on the response curve, or type exact values
+- Live combined frequency-response graph
+- Per-band frequency, gain, Q, and enable toggle
 
-The library defaults to `presets.json` in the per-user config directory
-(`~/.config/trncontrol/presets.json` on Linux). Override it with
-`-presets /path/to/file.json`. If the file cannot be opened the rest of
-the app still runs; only the preset endpoints report the failure.
+**Headroom & clipping analysis**
+- Continuously analyses the EQ curve for the peak boost it applies
+- Reports the recommended preamp cut needed to stay below 0 dBFS
+- Green / amber / red status with a live meter next to the volume control
 
-Key hardware identities:
+**Preset library**
+- Gallery of preset cards, each with a miniature EQ curve as a visual fingerprint
+- Apply any preset to the device with a single click
+- Save, rename, duplicate, delete, and pin favourites
+- Tag presets with the headphone or IEM they were tuned for
+- Search by name or target; sort by name, recently used, created, or modified
+- Import and export as JSON to share or back up
 
-- Vendor ID: `0x3302`
-- Product ID: `0x43E8`
+**Device control**
+- Master volume, channel balance, and microphone gain
+- Five DAC reconstruction filters, each with its impulse response and a plain-English description
+- Amplifier topology (Class-H / Class-AB) and output gain mode (Low / High)
+- Save settings to the device's flash so they survive a power cycle
+- Physical volume-button changes sync back to the UI in real time
+- Hot-plug detection with a manual reconnect button
 
-The device communicates using 64-byte HID reports with a header of `[ReportID, Type, Command, ...payload...]`.
+**Interface**
+- Responsive layout for desktop, tablet, and mobile
+- Flat dark theme with a red accent
+- Preset library remains editable while the DAC is unplugged
 
-### Frontend (`frontend/`)
+### Roadmap
 
-The frontend is a React + Vite application.
+- [ ] Desktop packaging via Tauri (config is in place; the Rust entry point still needs writing)
+- [ ] AutoEQ / Squiglink profile import
+- [ ] Multiple device profiles
+- [ ] Additional colour themes
+- [ ] Firmware update support
+- [ ] Resizable preset dock
+- [ ] Packaged binaries and installers
 
-- `frontend/src/App.tsx` is the main UI and state manager.
-- `frontend/src/api/client.ts` contains the REST/WebSocket client for the backend.
-- `frontend/src/dsp/biquad.ts` mirrors the Go biquad math for drawing the EQ response curve.
-- `frontend/src/components/` contains UI components:
-  - `BandList.tsx` - shows 10 EQ bands and allows editing.
-  - `EQGraph.tsx` - plots the combined EQ curve.
-  - `PresetBar.tsx` - select, save, rename, delete, import/export and flash EQ presets.
-  - `LevelSlider.tsx` - reusable slider for volume/balance/mic gain.
-  - `ToggleRow.tsx` - radio-group style toggles for DAC mode settings.
+---
 
-The frontend uses optimistic updates for controls and subscribes to device events on `/api/events`.
+## Screenshots
 
-### Tauri Layer (`src-tauri/`)
+<table>
+<tr>
+<td width="50%">
 
-The Tauri configuration exists in `src-tauri/`.
+**EQ editor & preset library**
 
-- `src-tauri/tauri.conf.json` configures packaging and dev behavior.
-- `src-tauri/build.rs` runs `tauri_build::build()`.
+![EQ editor with docked preset gallery](docs/screenshots/eq-desktop.png)
 
-Important note: the Tauri Rust application source directory `src-tauri/src/` is not present in this repository snapshot. That means the Tauri app cannot currently be built from this workspace as-is. The config is present, but the Rust entrypoint source appears to be missing.
+</td>
+<td width="50%">
 
-## How It Works
+**DAC filter selection**
 
-1. The backend opens the HID device and listens on `127.0.0.1:47823`.
-2. The frontend fetches current state from the sidecar and populates UI controls.
-3. User actions call API endpoints to set volume, balance, mic gain, EQ bands, and DAC modes.
-4. Writes to the device are often followed by a `latch` command to apply live changes.
-5. `flash` saves the current configuration to device flash.
-6. The frontend also listens to volume events from the device via WebSocket for physical control updates.
-7. Selecting a saved preset loads it into the editor and pushes all 10 bands
-   to the DAC live; flashing it is a separate action, so browsing presets
-   never burns a flash cycle.
+![DAC filter tab showing impulse responses](docs/screenshots/dac-filter.png)
 
-## Development Setup
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Microphone**
+
+![Microphone gain tab](docs/screenshots/microphone.png)
+
+</td>
+<td width="50%">
+
+**Mobile layout**
+
+<img src="docs/screenshots/mobile.png" alt="Mobile layout on a phone" width="260">
+
+</td>
+</tr>
+</table>
+
+<!-- Additional screenshots to add:
+![Preset gallery close-up](docs/screenshots/preset-gallery.png)
+![Headroom indicator warning state](docs/screenshots/headroom.png)
+-->
+
+## Installation
 
 ### Prerequisites
 
-- Go 1.22
-- Node.js + npm
-- Rust toolchain + `cargo` (for Tauri packaging)
-- `tauri-cli` if you want to build the desktop package
+- **Go** 1.22 or newer
+- **Node.js** 18 or newer, with npm
+- A **TRN Black Pearl / TE-C** DAC connected over USB
 
-### Install frontend dependencies
+> [!IMPORTANT]
+> **Linux users:** accessing USB HID devices normally requires root. To use the DAC as a
+> regular user, add a udev rule:
+>
+> ```bash
+> echo 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3302", ATTRS{idProduct}=="43e8", MODE="0660", TAG+="uaccess"' \
+>   | sudo tee /etc/udev/rules.d/70-trn-blackpearl.rules
+> sudo udevadm control --reload-rules && sudo udevadm trigger
+> ```
+>
+> Unplug and reconnect the DAC afterwards.
+
+### Clone and install
 
 ```bash
-cd frontend
-npm install
+git clone https://github.com/Matr1x01/trnBlackPearlEq.git
+cd trnBlackPearlEq
+
+# Backend dependencies
+cd backend && go mod download && cd ..
+
+# Frontend dependencies
+cd frontend && npm install && cd ..
 ```
 
-### Install backend dependencies
+### Run it
+
+The app is two processes: a Go sidecar that owns the USB connection, and the web UI.
+
+**Terminal 1 — backend**
 
 ```bash
 cd backend
-go mod download
+go run .
 ```
 
-### Run frontend development server
+It prints `READY 47823` once it is listening on `127.0.0.1:47823`.
+
+**Terminal 2 — frontend**
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-The frontend dev server is configured to proxy `/api` requests to `http://127.0.0.1:47823` and to support WebSockets.
+Then open **http://localhost:5173**.
 
-### Run backend sidecar
+To use the interface from your phone on the same network, run `npm run dev -- --host` and
+open the printed network address.
 
-```bash
-cd backend
-go run ./...
-```
-
-Then open `http://localhost:5173` to use the UI.
-
-### Build frontend
+### Build for production
 
 ```bash
-cd frontend
-npm run build
+# Frontend assets -> frontend/dist/
+cd frontend && npm run build
+
+# Backend binary
+cd backend && go build -o trncontrol-backend .
 ```
 
-### Build Tauri app
+---
 
-Because the Tauri `src-tauri/src/` source directory is missing, this step may not work until the Rust frontend launcher is restored.
+## Usage
 
-```bash
-cd src-tauri
-cargo build --release
-```
+**Build an EQ curve**
 
-## Notes and Known Gaps
+1. Open the **EQ Effect** tab.
+2. Drag any of the ten control points on the graph — horizontally for frequency, vertically for gain.
+3. For exact values, edit the frequency, gain, and Q fields in the band list below the graph.
+4. Change a band's shape with the type selector (`PK` peaking, `LS` low shelf, `HS` high shelf), or switch it off with its checkbox.
 
-- The code currently has no `src-tauri/src/main.rs` or Tauri Rust entrypoint in the workspace.
-- The backend listens only on loopback (`127.0.0.1`) for security, and the frontend assumes the same fixed port `47823`.
-- The frontend uses optimistic updates. If the backend write fails, the UI may temporarily show an uncommitted state.
+Every change is written to the DAC immediately, so you hear it as you make it.
 
-## Optional Commands
+**Watch your headroom**
 
-- `npm --prefix frontend run dev` - start frontend dev server
-- `npm --prefix frontend run build` - build frontend assets
-- `go run backend/main.go` - run the backend sidecar directly
+The meter beside the volume slider shows how much boost your curve applies. Green means you
+have room; red means a loud track will clip. The reading tells you exactly how much to cut.
 
-## Repo Structure
+**Work with presets**
 
-```
-backend/
-  main.go
-  api/
-    server.go
-    events.go
-    errors.go
-  hidproto/
-    protocol.go
-    device.go
-    peq.go
-    biquad.go
-  presets/
-    store.go
-    band.go
-    store_test.go
-frontend/
-  package.json
-  tsconfig.json
-  vite.config.ts
-  src/
-    App.tsx
-    main.tsx
-    api/client.ts
-    dsp/biquad.ts
-    components/
-src-tauri/
-  Cargo.toml
-  build.rs
-  tauri.conf.json
-```
+| Action | How |
+|---|---|
+| Save the current EQ | **+ Save current** in the preset library, then name it |
+| Apply a preset | Click its card — it loads into the editor and goes to the DAC |
+| Update a preset | Edit the EQ, then **Update active** |
+| Rename / duplicate / delete | The **⋯** menu on a card |
+| Pin a favourite | The **☆** on a card keeps it at the top |
+| Tag a target | **⋯ → Set target** to record the headphone it was tuned for |
+| Find one | Search by name or target, and sort by how recently you used it |
+| Share or back up | **Export all**, or export a single preset from its **⋯** menu |
 
-## Contact
+**Make it permanent**
 
-Use this README as the central reference for how the app works and how to continue development. If you restore the missing Tauri source, the desktop packaging flow can be completed from `src-tauri/`.
+Applying a preset changes the DAC live but does not persist it. Press **Save to Flash** to
+write the current state to the device so it survives being unplugged. Flash memory has a
+finite number of write cycles, so this is deliberately a separate, explicit action.
+
+---
+
+If you own a different TRN or TTGK device and want to help extend support, protocol captures
+are especially useful.
+
+## Acknowledgements
+
+- **[cheesyserg/pyBlackPearl](https://github.com/cheesyserg/pyBlackPearl)** — the reverse
+  engineering of the Black Pearl's HID protocol that made this project possible. This app's
+  device layer is built on that work.
+- The RBJ Audio EQ Cookbook, for the biquad formulas used by both the device and the UI.
+
+## License
+
+Not yet chosen. Until a license file is added, all rights are reserved — please open an issue
+if you would like to use this code.
+
+<!-- Suggested: MIT or Apache-2.0. Add a LICENSE file and update the badge at the top. -->
+
+## Disclaimer
+
+This is unofficial software that writes directly to your DAC's configuration and flash memory.
+It has been tested on firmware v0.6, but use it at your own risk. The authors are not
+responsible for any damage to your device.

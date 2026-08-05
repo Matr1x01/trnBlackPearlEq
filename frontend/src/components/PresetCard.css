@@ -9,7 +9,8 @@
   background: var(--bg-chassis);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden;
+  /* Deliberately NOT overflow:hidden -- the actions menu overflows the
+     card and would be clipped. The preview clips itself instead. */
   cursor: pointer;
   text-align: left;
   transition:
@@ -48,6 +49,18 @@
   height: 104px;
   background: linear-gradient(180deg, var(--bg-panel-raised), var(--bg-chassis));
   border-bottom: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  /* Clips the curve and gradient to the card's rounded top corners
+     without trapping the actions menu. */
+  overflow: hidden;
+}
+
+/* The menu escapes the preview's clip by sitting outside it. */
+.preset-menu-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 21;
 }
 
 .preset-card.active .preset-card-preview {
@@ -81,12 +94,6 @@
 
 .preset-pin {
   left: 6px;
-}
-
-.preset-menu-wrap {
-  position: absolute;
-  top: 0;
-  right: 0;
 }
 
 .preset-menu-btn {
@@ -268,6 +275,7 @@
   position: absolute;
   inset: 0;
   z-index: 30;
+  border-radius: calc(var(--radius) - 1px);
   display: flex;
   flex-direction: column;
   align-items: center;

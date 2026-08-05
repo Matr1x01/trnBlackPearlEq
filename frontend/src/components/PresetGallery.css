@@ -3,7 +3,11 @@
    ===================================================================== */
 
 .preset-gallery {
-  margin-top: var(--sp-4);
+  margin-top: 0;
+}
+
+.preset-scroll {
+  min-height: 0;
 }
 
 /* ── Toolbar ── */
@@ -207,6 +211,84 @@
 
 .preset-empty strong {
   color: var(--text-secondary);
+}
+
+/* =====================================================================
+   Docked variant — the panel lives in a ~300px rail beside the graph.
+   Viewport media queries can't see the rail's width, so the docked rules
+   are keyed off the dock itself and must override the grid breakpoints.
+   ===================================================================== */
+@media (min-width: 1280px) {
+  .preset-dock > .preset-gallery {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+  }
+
+  .preset-dock .panel-head {
+    margin-bottom: var(--sp-3);
+  }
+
+  /* The rail is one card wide at any viewport size. */
+  .preset-dock .preset-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Toolbar stacks: search, then sort, then a full-width action row. */
+  .preset-dock .preset-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+
+  .preset-dock .preset-search {
+    flex: 0 0 auto;
+  }
+
+  .preset-dock .preset-sort {
+    justify-content: space-between;
+  }
+
+  .preset-dock .preset-sort select {
+    flex: 1;
+    margin-left: var(--sp-2);
+    min-width: 0;
+  }
+
+  .preset-dock .preset-toolbar-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .preset-dock .preset-toolbar-actions .btn-ghost {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .preset-dock .preset-save-inline {
+    width: 100%;
+  }
+
+  .preset-dock .preset-save-inline input {
+    flex: 1 1 100%;
+    width: auto;
+  }
+
+  /* This is the pane that actually scrolls. */
+  .preset-dock .preset-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0 calc(var(--sp-2) * -1);
+    padding: 2px var(--sp-2);
+  }
+
+  /* Slightly shorter previews so more cards fit the rail at once. */
+  .preset-dock .preset-card-preview {
+    height: 88px;
+  }
 }
 
 /* ── Mobile toolbar reflow ── */

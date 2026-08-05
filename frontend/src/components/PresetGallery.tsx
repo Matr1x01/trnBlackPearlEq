@@ -215,43 +215,47 @@ export default function PresetGallery({
       </div>
 
       {/* ── Grid ── */}
-      {visible.length > 0 ? (
-        <div className="preset-grid">
-          {visible.map((p) => (
-            <PresetCard
-              key={p.id}
-              preset={p}
-              active={p.id === selectedId}
-              dirty={dirty}
-              busy={busy}
-              onApply={onApply}
-              onRename={onRename}
-              onRetarget={onRetarget}
-              onDuplicate={onDuplicate}
-              onExport={onExportOne}
-              onDelete={onDelete}
-              onTogglePin={onTogglePin}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="preset-empty">
-          {presets.length === 0 ? (
-            <>
-              <p className="preset-empty-title">No presets yet</p>
-              <p>
-                Dial in the EQ above, then hit <strong>Save current</strong> to keep it. Saved
-                presets can be applied with a single tap and flashed to the DAC.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="preset-empty-title">Nothing matches “{query}”</p>
-              <p>Try a different name, or clear the search.</p>
-            </>
-          )}
-        </div>
-      )}
+      {/* Own scroll container so a long library scrolls inside the dock
+          rather than stretching it. */}
+      <div className="preset-scroll">
+        {visible.length > 0 ? (
+          <div className="preset-grid">
+            {visible.map((p) => (
+              <PresetCard
+                key={p.id}
+                preset={p}
+                active={p.id === selectedId}
+                dirty={dirty}
+                busy={busy}
+                onApply={onApply}
+                onRename={onRename}
+                onRetarget={onRetarget}
+                onDuplicate={onDuplicate}
+                onExport={onExportOne}
+                onDelete={onDelete}
+                onTogglePin={onTogglePin}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="preset-empty">
+            {presets.length === 0 ? (
+              <>
+                <p className="preset-empty-title">No presets yet</p>
+                <p>
+                  Dial in the EQ, then hit <strong>Save current</strong> to keep it. Saved presets
+                  apply with a single tap and can be flashed to the DAC.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="preset-empty-title">Nothing matches “{query}”</p>
+                <p>Try a different name, or clear the search.</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       <input
         ref={fileRef}

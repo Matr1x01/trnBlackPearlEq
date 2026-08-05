@@ -414,6 +414,23 @@
   gap: var(--sp-3);
 }
 
+/* Editor and preset dock stack on narrow screens; they become side-by-side
+   panes at >= 1280px (see the split-pane block below). */
+.eq-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.eq-main {
+  min-width: 0;
+}
+
+.preset-dock {
+  min-width: 0;
+}
+
 .band-list-wrap {
   margin-top: var(--sp-4);
 }
@@ -523,8 +540,54 @@
   }
 }
 
+/* =====================================================================
+   Wide desktop — EQ editor and preset dock become independent panes
+   Below this width there simply isn't room for a 300px dock next to a
+   usable graph, so the gallery stays stacked underneath.
+   ===================================================================== */
+@media (min-width: 1280px) {
+  /* The page itself stops scrolling; each pane owns its own overflow. */
+  .content-area.split {
+    display: flex;
+    overflow: hidden;
+    padding-bottom: var(--sp-5);
+  }
+
+  .content-area.split > .eq-workspace {
+    flex: 1;
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  .eq-main {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Room for the scrollbar so it never overlaps the band list */
+    padding-right: 2px;
+  }
+
+  .preset-dock {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    flex-shrink: 0;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 1500px) {
+  .preset-dock {
+    width: 340px;
+  }
+}
+
+/* Centring the column would fight the split panes, so only apply it to
+   the single-column tabs. */
 @media (min-width: 1400px) {
-  .content-area > .tab-panel {
+  .content-area:not(.split) > .tab-panel {
     max-width: 1240px;
     margin: 0 auto;
   }

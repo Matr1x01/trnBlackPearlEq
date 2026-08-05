@@ -37,6 +37,13 @@ export default function PresetCard({
   const [draft, setDraft] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // In the docked rail the gallery scrolls, so a menu opened on a card
+  // near the bottom would hang below the fold. Nudge it into view.
+  useEffect(() => {
+    if (menuOpen) menuRef.current?.scrollIntoView({ block: "nearest" });
+  }, [menuOpen]);
 
   // Close the overflow menu on an outside click or Escape.
   useEffect(() => {
@@ -121,64 +128,66 @@ export default function PresetCard({
           {preset.pinned ? "★" : "☆"}
         </button>
 
-        <div className="preset-menu-wrap">
-          <button
-            className="preset-menu-btn"
-            aria-label="Preset actions"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={(e) => {
-              stop(e);
-              setConfirmDelete(false);
-              setMenuOpen((v) => !v);
-            }}
-          >
-            ⋯
-          </button>
-
-          {menuOpen && (
-            <div className="preset-menu" role="menu" onClick={stop}>
-              <button role="menuitem" onClick={() => startEdit("name")}>
-                <span aria-hidden="true">✎</span> Rename
-              </button>
-              <button role="menuitem" onClick={() => startEdit("target")}>
-                <span aria-hidden="true">◎</span> {preset.target ? "Edit target" : "Set target"}
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDuplicate(preset.id);
-                }}
-              >
-                <span aria-hidden="true">⧉</span> Duplicate
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onExport(preset.id);
-                }}
-              >
-                <span aria-hidden="true">↓</span> Export
-              </button>
-              <div className="preset-menu-sep" />
-              <button
-                role="menuitem"
-                className="danger"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setConfirmDelete(true);
-                }}
-              >
-                <span aria-hidden="true">✕</span> Delete
-              </button>
-            </div>
-          )}
-        </div>
-
         {active && (
           <span className="preset-active-tag">{dirty ? "Active · edited" : "Active"}</span>
+        )}
+      </div>
+
+      {/* Sits outside the preview: that box clips its overflow to keep the
+          curve inside the rounded corners, which would eat the menu. */}
+      <div className="preset-menu-wrap">
+        <button
+          className="preset-menu-btn"
+          aria-label="Preset actions"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={(e) => {
+            stop(e);
+            setConfirmDelete(false);
+            setMenuOpen((v) => !v);
+          }}
+        >
+          ⋯
+        </button>
+
+        {menuOpen && (
+          <div className="preset-menu" role="menu" ref={menuRef} onClick={stop}>
+            <button role="menuitem" onClick={() => startEdit("name")}>
+              <span aria-hidden="true">✎</span> Rename
+            </button>
+            <button role="menuitem" onClick={() => startEdit("target")}>
+              <span aria-hidden="true">◎</span> {preset.target ? "Edit target" : "Set target"}
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                onDuplicate(preset.id);
+              }}
+            >
+              <span aria-hidden="true">⧉</span> Duplicate
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                onExport(preset.id);
+              }}
+            >
+              <span aria-hidden="true">↓</span> Export
+            </button>
+            <div className="preset-menu-sep" />
+            <button
+              role="menuitem"
+              className="danger"
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmDelete(true);
+              }}
+            >
+              <span aria-hidden="true">✕</span> Delete
+            </button>
+          </div>
         )}
       </div>
 
