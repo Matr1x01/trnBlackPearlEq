@@ -178,6 +178,64 @@ button {
   cursor: not-allowed;
 }
 
+/* Compact secondary button, used across the preset UI */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background var(--transition),
+    transform var(--transition);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-dim);
+  background: var(--bg-panel-raised);
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-ghost.btn-confirm {
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+}
+
+.btn-ghost.btn-confirm:hover:not(:disabled) {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.btn-ghost.btn-danger {
+  color: var(--danger);
+  border-color: rgba(255, 59, 78, 0.4);
+}
+
+.btn-ghost.btn-danger:hover:not(:disabled) {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
 /* Coarse pointers get full-size targets on every control */
 @media (pointer: coarse) {
   button,

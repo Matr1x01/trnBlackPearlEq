@@ -1,0 +1,296 @@
+/* =====================================================================
+   PresetCard — one tile in the preset gallery
+   ===================================================================== */
+
+.preset-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-chassis);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+  opacity: 0;
+  animation: rise-in 0.34s var(--ease) forwards;
+}
+
+@media (hover: hover) {
+  .preset-card:hover {
+    border-color: var(--line-bright);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+}
+
+.preset-card:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+.preset-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim), 0 6px 20px rgba(255, 47, 69, 0.14);
+}
+
+.preset-card.busy {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ── Preview area: the curve is the focus ── */
+.preset-card-preview {
+  position: relative;
+  height: 104px;
+  background: linear-gradient(180deg, var(--bg-panel-raised), var(--bg-chassis));
+  border-bottom: 1px solid var(--line);
+}
+
+.preset-card.active .preset-card-preview {
+  background: linear-gradient(180deg, var(--accent-wash-soft), var(--bg-chassis));
+}
+
+/* ── Corner controls ── */
+.preset-pin,
+.preset-menu-btn {
+  position: absolute;
+  top: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: rgba(10, 11, 14, 0.72);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition),
+    opacity var(--transition);
+}
+
+.preset-pin {
+  left: 6px;
+}
+
+.preset-menu-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.preset-menu-btn {
+  right: 6px;
+  font-size: 15px;
+}
+
+.preset-pin:hover,
+.preset-menu-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--line-bright);
+  background: var(--bg-surface);
+}
+
+.preset-pin.pinned {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* Idle controls stay quiet until the card is touched or focused */
+@media (hover: hover) {
+  .preset-pin:not(.pinned),
+  .preset-menu-btn {
+    opacity: 0;
+  }
+
+  .preset-card:hover .preset-pin,
+  .preset-card:hover .preset-menu-btn,
+  .preset-card:focus-within .preset-pin,
+  .preset-card:focus-within .preset-menu-btn {
+    opacity: 1;
+  }
+}
+
+/* ── Overflow menu ── */
+.preset-menu {
+  position: absolute;
+  top: 38px;
+  right: 6px;
+  z-index: 20;
+  min-width: 158px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  animation: pop-in 0.14s var(--ease);
+  transform-origin: top right;
+}
+
+.preset-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.preset-menu button:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.preset-menu button span {
+  width: 13px;
+  text-align: center;
+  opacity: 0.8;
+  font-size: 12px;
+}
+
+.preset-menu button.danger {
+  color: var(--danger);
+}
+
+.preset-menu button.danger:hover {
+  background: rgba(255, 59, 78, 0.12);
+}
+
+.preset-menu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+
+/* ── Active tag ── */
+.preset-active-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: pop-in 0.22s var(--ease-spring);
+}
+
+/* ── Body ── */
+.preset-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 12px 12px;
+}
+
+.preset-card-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-card.active .preset-card-name {
+  color: var(--accent-bright);
+}
+
+.preset-card-target {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-card-input {
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+}
+
+.preset-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.preset-meta-dot {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.preamp-cut {
+  color: var(--warning);
+}
+
+/* ── Delete confirmation overlay ── */
+.preset-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  text-align: center;
+  background: rgba(8, 9, 11, 0.94);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.16s var(--ease);
+}
+
+.preset-confirm p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.preset-confirm strong {
+  color: var(--text-primary);
+}
+
+.preset-confirm-actions {
+  display: flex;
+  gap: var(--sp-2);
+}

@@ -418,6 +418,36 @@
   margin-top: var(--sp-4);
 }
 
+/* Which saved preset the live EQ came from */
+.eq-active-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 100px;
+  border: 1px solid var(--accent-dim);
+  background: var(--accent-wash-soft);
+  color: var(--accent-bright);
+  font-size: 11.5px;
+  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: pop-in 0.22s var(--ease);
+}
+
+.eq-active-preset.dirty {
+  border-color: var(--warning);
+  background: rgba(245, 166, 35, 0.07);
+  color: var(--warning);
+}
+
+.eq-active-preset em {
+  font-style: normal;
+  opacity: 0.75;
+}
+
 /* =====================================================================
    Tablet and up — graph and volume sit side by side
    ===================================================================== */

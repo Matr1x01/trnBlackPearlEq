@@ -1,0 +1,46 @@
+.mini-eq {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mini-eq-zero {
+  stroke: var(--line-bright);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.mini-eq-area {
+  fill: var(--accent);
+  opacity: 0.1;
+  transition: opacity var(--transition);
+}
+
+/* Same visual language as the main graph, one notch thinner */
+.mini-eq-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--transition), opacity var(--transition);
+}
+
+.mini-eq.muted .mini-eq-line {
+  opacity: 0.65;
+}
+
+.mini-eq.muted .mini-eq-area {
+  opacity: 0.05;
+}
+
+.preset-card:hover .mini-eq.muted .mini-eq-line {
+  opacity: 1;
+}
+
+.preset-card:hover .mini-eq.muted .mini-eq-area {
+  opacity: 0.1;
+}

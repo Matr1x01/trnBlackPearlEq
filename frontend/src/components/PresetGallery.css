@@ -1,0 +1,241 @@
+/* =====================================================================
+   PresetGallery — searchable, sortable card grid
+   ===================================================================== */
+
+.preset-gallery {
+  margin-top: var(--sp-4);
+}
+
+/* ── Toolbar ── */
+.preset-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.preset-search {
+  position: relative;
+  flex: 1 1 190px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.preset-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.preset-search input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 30px 8px 28px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.preset-search input::placeholder {
+  color: var(--text-dim);
+}
+
+.preset-search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+/* The stock WebKit clear affordance clashes with our own */
+.preset-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.preset-search-clear {
+  position: absolute;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.preset-search-clear:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.preset-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.preset-sort select {
+  min-height: 38px;
+  padding: 8px 10px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+
+.preset-sort select:hover {
+  border-color: var(--line-bright);
+}
+
+.preset-sort select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.preset-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.preset-save-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-save-inline input {
+  width: 180px;
+  min-height: 38px;
+  padding: 8px 10px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  outline: none;
+}
+
+/* ── Grid: 1 col on phones, filling out with width ── */
+.preset-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+}
+
+@media (min-width: 420px) {
+  .preset-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 721px) {
+  .preset-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .preset-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1500px) {
+  .preset-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Stagger the first two rows in; beyond that it just delays the view */
+.preset-card:nth-child(1) { animation-delay: 0.02s; }
+.preset-card:nth-child(2) { animation-delay: 0.04s; }
+.preset-card:nth-child(3) { animation-delay: 0.06s; }
+.preset-card:nth-child(4) { animation-delay: 0.08s; }
+.preset-card:nth-child(5) { animation-delay: 0.10s; }
+.preset-card:nth-child(6) { animation-delay: 0.12s; }
+.preset-card:nth-child(7) { animation-delay: 0.14s; }
+.preset-card:nth-child(8) { animation-delay: 0.16s; }
+
+/* ── Empty state ── */
+.preset-empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  border: 1px dashed var(--line-bright);
+  border-radius: var(--radius);
+  background: var(--bg-chassis);
+}
+
+.preset-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.preset-empty p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 46ch;
+  margin: 0 auto;
+}
+
+.preset-empty strong {
+  color: var(--text-secondary);
+}
+
+/* ── Mobile toolbar reflow ── */
+@media (max-width: 720px) {
+  .preset-toolbar-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .preset-toolbar-actions .btn-ghost {
+    flex: 1 1 auto;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .preset-save-inline {
+    width: 100%;
+  }
+
+  .preset-save-inline input {
+    flex: 1 1 100%;
+    width: auto;
+  }
+
+  .preset-sort {
+    flex: 1 1 auto;
+  }
+
+  .preset-sort select {
+    flex: 1;
+  }
+}

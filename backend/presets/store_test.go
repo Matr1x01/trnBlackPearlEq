@@ -30,7 +30,7 @@ func TestCreateAndReload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	p, err := s.Create("  Bass Boost  ", flatBands())
+	p, err := s.Create("  Bass Boost  ", "", flatBands())
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -54,15 +54,15 @@ func TestCreateAndReload(t *testing.T) {
 func TestCreateRejectsBadInput(t *testing.T) {
 	s := newTestStore(t)
 
-	if _, err := s.Create("   ", flatBands()); err != ErrEmptyName {
+	if _, err := s.Create("   ", "", flatBands()); err != ErrEmptyName {
 		t.Errorf("empty name: got %v, want ErrEmptyName", err)
 	}
-	if _, err := s.Create("short", flatBands()[:3]); err != ErrBandCount {
+	if _, err := s.Create("short", "", flatBands()[:3]); err != ErrBandCount {
 		t.Errorf("short band list: got %v, want ErrBandCount", err)
 	}
 	bad := flatBands()
 	bad[2].Type = "XX"
-	if _, err := s.Create("bad type", bad); err == nil {
+	if _, err := s.Create("bad type", "", bad); err == nil {
 		t.Error("expected an error for an unknown filter type")
 	}
 	if got := len(s.List()); got != 0 {
@@ -78,7 +78,7 @@ func TestCreateClampsOutOfRangeValues(t *testing.T) {
 	b[2].Q = 0
 	b[3].GainDB = 500
 
-	p, err := s.Create("clamped", b)
+	p, err := s.Create("clamped", "", b)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -95,10 +95,10 @@ func TestCreateClampsOutOfRangeValues(t *testing.T) {
 
 func TestDuplicateNamesAreDisambiguated(t *testing.T) {
 	s := newTestStore(t)
-	if _, err := s.Create("Vocal", flatBands()); err != nil {
+	if _, err := s.Create("Vocal", "", flatBands()); err != nil {
 		t.Fatal(err)
 	}
-	second, err := s.Create("vocal", flatBands())
+	second, err := s.Create("vocal", "", flatBands())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,13 +109,13 @@ func TestDuplicateNamesAreDisambiguated(t *testing.T) {
 
 func TestUpdateRenameAndOverwrite(t *testing.T) {
 	s := newTestStore(t)
-	p, err := s.Create("Original", flatBands())
+	p, err := s.Create("Original", "", flatBands())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	name := "Renamed"
-	renamed, err := s.Update(p.ID, &name, nil)
+	renamed, err := s.Update(p.ID, Patch{Name: &name})
 	if err != nil {
 		t.Fatalf("rename: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestUpdateRenameAndOverwrite(t *testing.T) {
 	b := flatBands()
 	b[0].GainDB = 6
 	b[0].Enabled = true
-	overwritten, err := s.Update(p.ID, nil, b)
+	overwritten, err := s.Update(p.ID, Patch{Bands: b})
 	if err != nil {
 		t.Fatalf("overwrite: %v", err)
 	}
@@ -134,15 +134,94 @@ func TestUpdateRenameAndOverwrite(t *testing.T) {
 		t.Errorf("overwrite changed the wrong fields: %+v", overwritten)
 	}
 
-	if _, err := s.Update("nope", &name, nil); err != ErrNotFound {
+	if _, err := s.Update("nope", Patch{Name: &name}); err != ErrNotFound {
+		t.Errorf("unknown id: got %v, want ErrNotFound", err)
+	}
+}
+
+func TestPinDoesNotTouchUpdatedAt(t *testing.T) {
+	s := newTestStore(t)
+	p, err := s.Create("Pinnable", "", flatBands())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pinned := true
+	got, err := s.Update(p.ID, Patch{Pinned: &pinned})
+	if err != nil {
+		t.Fatalf("pin: %v", err)
+	}
+	if !got.Pinned {
+		t.Error("preset was not pinned")
+	}
+	if !got.UpdatedAt.Equal(p.UpdatedAt) {
+		t.Errorf("pinning bumped UpdatedAt: %v -> %v", p.UpdatedAt, got.UpdatedAt)
+	}
+
+	// ...but a real edit must.
+	name := "Edited"
+	edited, err := s.Update(p.ID, Patch{Name: &name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !edited.UpdatedAt.After(p.UpdatedAt) {
+		t.Error("renaming did not bump UpdatedAt")
+	}
+	if !edited.Pinned {
+		t.Error("rename cleared the pin")
+	}
+}
+
+func TestTargetRoundTrips(t *testing.T) {
+	s := newTestStore(t)
+	p, err := s.Create("Tuned", "  Moondrop Blessing 3  ", flatBands())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Target != "Moondrop Blessing 3" {
+		t.Errorf("target not trimmed: %q", p.Target)
+	}
+
+	empty := ""
+	cleared, err := s.Update(p.ID, Patch{Target: &empty})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleared.Target != "" {
+		t.Errorf("target not cleared: %q", cleared.Target)
+	}
+}
+
+func TestMarkUsed(t *testing.T) {
+	s := newTestStore(t)
+	p, err := s.Create("Used", "", flatBands())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.LastUsedAt != nil {
+		t.Error("a fresh preset should have no last-used stamp")
+	}
+
+	used, err := s.MarkUsed(p.ID)
+	if err != nil {
+		t.Fatalf("MarkUsed: %v", err)
+	}
+	if used.LastUsedAt == nil {
+		t.Fatal("last-used stamp was not set")
+	}
+	if !used.UpdatedAt.Equal(p.UpdatedAt) {
+		t.Error("using a preset must not count as modifying it")
+	}
+
+	if _, err := s.MarkUsed("nope"); err != ErrNotFound {
 		t.Errorf("unknown id: got %v, want ErrNotFound", err)
 	}
 }
 
 func TestDelete(t *testing.T) {
 	s := newTestStore(t)
-	a, _ := s.Create("A", flatBands())
-	b, _ := s.Create("B", flatBands())
+	a, _ := s.Create("A", "", flatBands())
+	b, _ := s.Create("B", "", flatBands())
 
 	if err := s.Delete(a.ID); err != nil {
 		t.Fatalf("Delete: %v", err)
@@ -188,7 +267,7 @@ func TestLoadSkipsMalformedEntries(t *testing.T) {
 
 func TestListReturnsCopies(t *testing.T) {
 	s := newTestStore(t)
-	if _, err := s.Create("A", flatBands()); err != nil {
+	if _, err := s.Create("A", "", flatBands()); err != nil {
 		t.Fatal(err)
 	}
 	s.List()[0].Bands[0].GainDB = 99

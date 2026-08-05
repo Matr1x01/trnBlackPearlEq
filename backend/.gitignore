@@ -1,0 +1,15 @@
+# Built backend binary
+trncontrol-backend
+
+# Other build artifacts
+*.exe
+*.exe~
+*.out
+*.test
+
+# Vendor directory (if used)
+vendor/
+
+# Environment and misc
+.env
+.DS_Store

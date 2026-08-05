@@ -4,8 +4,8 @@ import type { EQBand, FilterMode, GainMode, AmpMode, Preset } from "./api/client
 import EQGraph from "./components/EQGraph";
 import BandList from "./components/BandList";
 import LevelSlider from "./components/LevelSlider";
-import PresetBar from "./components/PresetBar";
-import type { ImportedPreset } from "./components/PresetBar";
+import PresetGallery from "./components/PresetGallery";
+import type { ImportedPreset } from "./components/PresetGallery";
 import TabNav from "./components/TabNav";
 import type { TabId } from "./components/TabNav";
 import DeviceInfo from "./components/DeviceInfo";
@@ -225,16 +225,18 @@ export default function App() {
   // Selecting a preset loads it into the editor and pushes it to the
   // DAC live (latch only). Persisting it is the separate Flash action,
   // so browsing presets never burns a flash cycle.
-  const handleSelectPreset = useCallback(
-    (id: string | null) => {
-      setSelectedPresetId(id);
-      if (!id) return;
+  const handleApplyPreset = useCallback(
+    (id: string) => {
       const preset = presets.find((p) => p.id === id);
       if (!preset) return;
+      setSelectedPresetId(id);
       setBands(preset.bands.map((b) => ({ ...b })));
       if (!connected) return;
       runPresetAction(async () => {
-        await api.applyPreset(id, false);
+        // The response carries the refreshed last-used stamp, which
+        // "recently used" sorting depends on.
+        const res = await api.applyPreset(id, false);
+        setPresets((prev) => prev.map((p) => (p.id === res.preset.id ? res.preset : p)));
       });
     },
     [presets, connected, runPresetAction]
@@ -259,77 +261,118 @@ export default function App() {
     });
   }, [selectedPresetId, bands, runPresetAction]);
 
-  const handleRenamePreset = useCallback(
-    (name: string) => {
-      if (!selectedPresetId) return;
+  // Card-level edits address a preset by id -- they act on whichever card
+  // was touched, not on whatever happens to be applied.
+  const patchPreset = useCallback(
+    (id: string, patch: Parameters<typeof api.updatePreset>[1]) => {
       runPresetAction(async () => {
-        const updated = await api.updatePreset(selectedPresetId, { name });
+        const updated = await api.updatePreset(id, patch);
         setPresets((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       });
     },
-    [selectedPresetId, runPresetAction]
+    [runPresetAction]
   );
 
-  const handleDeletePreset = useCallback(() => {
-    if (!selectedPresetId) return;
-    const id = selectedPresetId;
-    runPresetAction(async () => {
-      await api.deletePreset(id);
-      setPresets((prev) => prev.filter((p) => p.id !== id));
-      setSelectedPresetId((cur) => (cur === id ? null : cur));
-    });
-  }, [selectedPresetId, runPresetAction]);
+  const handleRenamePreset = useCallback(
+    (id: string, name: string) => patchPreset(id, { name }),
+    [patchPreset]
+  );
 
-  // Re-send the preset before flashing so what gets burned is exactly
-  // the stored preset. With unsaved edits on screen we flash whatever
-  // is already live on the device instead.
-  const handleFlashPreset = useCallback(() => {
-    runPresetAction(async () => {
-      if (selectedPresetId && !presetDirty) {
-        await api.applyPreset(selectedPresetId, true);
-      } else {
-        await api.flash();
-      }
-    });
-  }, [selectedPresetId, presetDirty, runPresetAction]);
+  const handleRetargetPreset = useCallback(
+    (id: string, target: string) => patchPreset(id, { target }),
+    [patchPreset]
+  );
+
+  const handleTogglePin = useCallback(
+    (id: string) => {
+      const preset = presets.find((p) => p.id === id);
+      if (!preset) return;
+      patchPreset(id, { pinned: !preset.pinned });
+    },
+    [presets, patchPreset]
+  );
+
+  const handleDuplicatePreset = useCallback(
+    (id: string) => {
+      const preset = presets.find((p) => p.id === id);
+      if (!preset) return;
+      runPresetAction(async () => {
+        // The store disambiguates the name if "... copy" is already taken.
+        const created = await api.createPreset(`${preset.name} copy`, preset.bands, preset.target);
+        setPresets((prev) => [...prev, created]);
+      });
+    },
+    [presets, runPresetAction]
+  );
+
+  const handleDeletePreset = useCallback(
+    (id: string) => {
+      runPresetAction(async () => {
+        await api.deletePreset(id);
+        setPresets((prev) => prev.filter((p) => p.id !== id));
+        setSelectedPresetId((cur) => (cur === id ? null : cur));
+      });
+    },
+    [runPresetAction]
+  );
+
 
   const handleImportPresets = useCallback(
     (items: ImportedPreset[]) => {
       runPresetAction(async () => {
         const created: Preset[] = [];
         for (const item of items) {
-          created.push(await api.createPreset(item.name, item.bands));
+          created.push(await api.createPreset(item.name, item.bands, item.target ?? ""));
         }
         setPresets((prev) => [...prev, ...created]);
-        if (created.length > 0) setSelectedPresetId(created[created.length - 1].id);
       });
     },
     [runPresetAction]
   );
 
-  const handleExportPresets = useCallback(() => {
-    const blob = new Blob([JSON.stringify({ version: 1, presets }, null, 2)], {
-      type: "application/json",
-    });
+  const downloadJSON = useCallback((data: unknown, filename: string) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "trn-eq-presets.json";
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-  }, [presets]);
+  }, []);
+
+  const handleExportPresets = useCallback(
+    () => downloadJSON({ version: 1, presets }, "trn-eq-presets.json"),
+    [presets, downloadJSON]
+  );
+
+  const handleExportOne = useCallback(
+    (id: string) => {
+      const preset = presets.find((p) => p.id === id);
+      if (!preset) return;
+      const slug = preset.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+      downloadJSON({ version: 1, presets: [preset] }, `${slug || "preset"}.json`);
+    },
+    [presets, downloadJSON]
+  );
 
   // ── Flash Save ──────────────────────────────────────────────────────
+  // With a clean preset applied, re-send it before flashing so what gets
+  // burned is exactly that preset. With unsaved edits on screen, flash
+  // whatever is already live rather than silently discarding them.
   const handleFlashSave = useCallback(async () => {
     setSaving(true);
     try {
-      await api.flash();
+      if (selectedPresetId && !presetDirty) {
+        await api.applyPreset(selectedPresetId, true);
+      } else {
+        await api.flash();
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [selectedPresetId, presetDirty]);
 
   // ── Reset EQ ────────────────────────────────────────────────────────
   // Flattens all ten bands and writes them out. This only clears the EQ
@@ -470,25 +513,17 @@ export default function App() {
                 <div className="panel-head">
                   <div>
                     <h2 className="panel-title">Parametric EQ</h2>
-                    <p className="panel-sub">10 bands · drag a node on the curve, or edit numerically below</p>
+                    <p className="panel-sub">
+                      10 bands · drag a node on the curve, or edit numerically below
+                    </p>
                   </div>
+                  {selectedPreset && (
+                    <span className={`eq-active-preset ${presetDirty ? "dirty" : ""}`}>
+                      {selectedPreset.name}
+                      {presetDirty && <em> · edited</em>}
+                    </span>
+                  )}
                 </div>
-                <PresetBar
-                  presets={presets}
-                  selectedId={selectedPresetId}
-                  dirty={presetDirty}
-                  busy={presetBusy}
-                  connected={connected}
-                  onSelect={handleSelectPreset}
-                  onSaveAs={handleSavePresetAs}
-                  onUpdate={handleUpdatePreset}
-                  onRename={handleRenamePreset}
-                  onDelete={handleDeletePreset}
-                  onFlash={handleFlashPreset}
-                  onImport={handleImportPresets}
-                  onExport={handleExportPresets}
-                  onError={setError}
-                />
                 <div className="eq-stage">
                   <EQGraph
                     bands={bands}
@@ -517,6 +552,25 @@ export default function App() {
                   />
                 </div>
               </section>
+
+              <PresetGallery
+                presets={presets}
+                selectedId={selectedPresetId}
+                dirty={presetDirty}
+                busy={presetBusy}
+                onApply={handleApplyPreset}
+                onSaveCurrent={handleSavePresetAs}
+                onUpdateCurrent={handleUpdatePreset}
+                onRename={handleRenamePreset}
+                onRetarget={handleRetargetPreset}
+                onDuplicate={handleDuplicatePreset}
+                onDelete={handleDeletePreset}
+                onTogglePin={handleTogglePin}
+                onExportOne={handleExportOne}
+                onExportAll={handleExportPresets}
+                onImport={handleImportPresets}
+                onError={setError}
+              />
             </div>
           )}
 

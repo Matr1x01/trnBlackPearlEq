@@ -25,9 +25,21 @@ export interface Status {
 export interface Preset {
   id: string;
   name: string;
+  /** Headphone or IEM this tuning targets. Empty when unset. */
+  target: string;
+  pinned: boolean;
   bands: EQBand[];
   createdAt: string;
   updatedAt: string;
+  /** Stamped when applied to the device; null until first use. */
+  lastUsedAt: string | null;
+}
+
+export interface PresetPatch {
+  name?: string;
+  target?: string;
+  pinned?: boolean;
+  bands?: EQBand[];
 }
 
 export const BAND_COUNT = 10;
@@ -79,10 +91,13 @@ export const api = {
   flash: () => req<{ ok: boolean }>("/api/flash", { method: "POST" }),
 
   listPresets: () => req<{ presets: Preset[] }>("/api/presets").then((r) => r.presets ?? []),
-  createPreset: (name: string, bands: EQBand[]) =>
-    req<Preset>("/api/presets", { method: "POST", body: JSON.stringify({ name, bands }) }),
+  createPreset: (name: string, bands: EQBand[], target = "") =>
+    req<Preset>("/api/presets", {
+      method: "POST",
+      body: JSON.stringify({ name, bands, target }),
+    }),
   /** Omit a field to leave it untouched: rename without resending bands, or vice versa. */
-  updatePreset: (id: string, patch: { name?: string; bands?: EQBand[] }) =>
+  updatePreset: (id: string, patch: PresetPatch) =>
     req<Preset>(`/api/presets/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(patch),
