@@ -2,17 +2,29 @@
 name = "trncontrol"
 version = "0.1.0"
 description = "TRN Black Pearl (TE-C) DAC Control Panel"
-authors = ["you"]
+authors = ["TRN Black Pearl Control contributors"]
 edition = "2021"
+rust-version = "1.77"
+
+# The desktop shell is deliberately thin: it opens a webview onto the built
+# frontend and supervises the Go sidecar that owns the USB connection.
+[lib]
+name = "trncontrol_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = ["shell-open"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
-[features]
-default = ["custom-protocol"]
-custom-protocol = "tauri/custom-protocol"
+# This is a shell, not a compute workload -- optimise for size.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

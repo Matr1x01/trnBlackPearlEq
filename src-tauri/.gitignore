@@ -1,8 +1,17 @@
 # Cargo / Rust build directory
 /target/
 
-# Tauri build artifacts
-/src-tauri/target/
+# Compiled Go sidecar — rebuilt per platform by the build step
+/binaries/
+
+# Schemas Tauri regenerates on every build
+/gen/
+
+# Mobile launcher icons emitted by `cargo tauri icon`. This is a desktop
+# build, so nothing references them; re-run that command if Android or
+# iOS targets are ever added.
+/icons/android/
+/icons/ios/
 
 # Environment
 .env

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions granted to the main window. The sidecar is spawned from Rust, which does not go through the IPC permission layer, so no shell permissions are needed here.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

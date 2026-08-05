@@ -24,6 +24,9 @@ func main() {
 	presetFile := flag.String("presets", "", "path to the EQ preset library (default: per-user config dir)")
 	flag.Parse()
 
+	// Exit with the desktop shell if we were launched by it.
+	watchParent()
+
 	if err := hid.Init(); err != nil {
 		log.Fatalf("hid init: %v", err)
 	}

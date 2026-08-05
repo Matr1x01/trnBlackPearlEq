@@ -1,56 +1,51 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TRN Black Pearl Control",
+  "version": "0.1.0",
+  "identifier": "io.github.matr1x01.trnblackpearl",
   "build": {
-    "beforeDevCommand": "npm --prefix ../frontend run dev",
-    "beforeBuildCommand": "npm --prefix ../frontend run build",
-    "devPath": "http://localhost:5173",
-    "distDir": "../frontend/dist"
+    "beforeDevCommand": "npm --prefix frontend run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm --prefix frontend run build",
+    "frontendDist": "../frontend/dist"
   },
-  "package": {
-    "productName": "TRN Black Pearl Control",
-    "version": "0.1.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "Audio",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [],
-      "identifier": "com.trncontrol.app",
-      "longDescription": "",
-      "macOS": {
-        "frameworks": [],
-        "minimumSystemVersion": ""
-      },
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
-    "security": {
-      "csp": null
-    },
+  "app": {
     "windows": [
       {
-        "fullscreen": false,
-        "height": 720,
-        "resizable": true,
+        "label": "main",
         "title": "TRN Black Pearl Control",
-        "width": 1180
+        "width": 1280,
+        "height": 800,
+        "minWidth": 360,
+        "minHeight": 560,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
       }
-    ]
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: asset: http://asset.localhost; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:47823 ws://127.0.0.1:47823"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage"],
+    "category": "Music",
+    "shortDescription": "Control panel for the TRN Black Pearl USB DAC",
+    "longDescription": "Parametric EQ, preset library, and full device control for the TRN Black Pearl (TE-C) USB DAC. Talks to the device directly over USB HID; everything stays local.",
+    "copyright": "",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": ["binaries/trncontrol-backend"],
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
   }
 }

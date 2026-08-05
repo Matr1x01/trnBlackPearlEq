@@ -78,9 +78,14 @@ This project replaces it. It's a self-contained control panel that talks to the 
 - Flat dark theme with a red accent
 - Preset library remains editable while the DAC is unplugged
 
+**Desktop app**
+- Native Linux desktop window via Tauri, packaged as a `.deb`
+- Bundles the backend as a managed sidecar — one install, nothing else to run
+- Shuts the backend down with the window, even if the app is force-killed
+
 ### Roadmap
 
-- [ ] Desktop packaging via Tauri (config is in place; the Rust entry point still needs writing)
+- [ ] AppImage and Windows / macOS builds
 - [ ] AutoEQ / Squiglink profile import
 - [ ] Multiple device profiles
 - [ ] Additional colour themes
@@ -199,6 +204,71 @@ cd frontend && npm run build
 # Backend binary
 cd backend && go build -o trncontrol-backend .
 ```
+
+---
+
+## Building the desktop app (Linux)
+
+This produces a native window and a `.deb` you can install like any other app —
+the backend is bundled inside and started automatically.
+
+**1. Install the toolchain** (one time)
+
+```bash
+# Tauri's system dependencies
+sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+# Rust + the Tauri CLI
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+. "$HOME/.cargo/env"
+cargo install tauri-cli --version "^2" --locked
+```
+
+> [!NOTE]
+> Requires **Tauri v2** and `libwebkit2gtk-4.1`. Ubuntu 24.04 and newer no longer
+> ship the `4.0` package that Tauri v1 needed. Budget roughly 4 GB of disk for the
+> Rust toolchain and build cache.
+
+**2. Build the Go backend as a sidecar**
+
+Tauri locates sidecars by target triple, so the filename suffix matters:
+
+```bash
+TRIPLE=$(rustc -vV | grep '^host:' | cut -d' ' -f2)
+mkdir -p src-tauri/binaries
+cd backend
+CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" \
+  -o "../src-tauri/binaries/trncontrol-backend-$TRIPLE" .
+cd ..
+```
+
+**3. Build the app**
+
+```bash
+cd src-tauri
+cargo tauri build
+```
+
+The installer lands in `src-tauri/target/release/bundle/deb/`:
+
+```bash
+sudo dpkg -i "src-tauri/target/release/bundle/deb/TRN Black Pearl Control_0.1.0_amd64.deb"
+```
+
+It then appears in your application menu as **TRN Black Pearl Control**. To run the
+built binary without installing:
+
+```bash
+./src-tauri/target/release/trncontrol
+```
+
+For live development with hot reload, use `cargo tauri dev` instead.
+
+> [!TIP]
+> `cargo tauri build` also targets AppImage, which downloads tooling from GitHub at
+> build time. If that download times out, build just the Debian package with
+> `cargo tauri build --bundles deb`.
 
 ---
 

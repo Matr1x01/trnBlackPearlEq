@@ -1,5 +1,14 @@
+# =====================================================================
+# Repo-wide ignores. Each subproject also has its own .gitignore; the
+# rules here are the safety net so an artifact is never committed just
+# because a nested file was moved or deleted.
+# =====================================================================
+
+# OS cruft
 .DS_Store
 Thumbs.db
+*.swp
+*~
 
 # Editor / AI tool directories
 .vscode/
@@ -17,17 +26,15 @@ yarn-debug.log*
 pnpm-debug.log*
 *.log
 
-# Node / frontend
+# ── Node / frontend ──
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.vite/
 /frontend/.cache/
+node_modules/
 
-# Build outputs
-/dist/
-/build/
-
-# Go build outputs / binaries
+# ── Go backend ──
+# Compiled sidecar, plus the generic Go artifact patterns.
 /backend/trncontrol-backend
 /backend/*.exe
 *.exe
@@ -37,17 +44,39 @@ pnpm-debug.log*
 *.dylib
 *.test
 *.out
-
-# Go vendor
+go.work
+go.work.sum
 vendor/
 
-# Rust / Tauri
+# ── Rust / Tauri ──
 /src-tauri/target/
+/src-tauri/binaries/
+/src-tauri/gen/
+/src-tauri/icons/android/
+/src-tauri/icons/ios/
 /target/
 
-# Coverage and misc
+# Packaged installers. These live under src-tauri/target/ already, but
+# the patterns stop a copy left elsewhere in the tree from being added.
+*.deb
+*.rpm
+*.AppImage
+*.dmg
+*.msi
+*.msi.zip
+
+# ── Generic build outputs ──
+/dist/
+/build/
+
+# ── Runtime data ──
+# The preset library normally lives in the user config directory, but
+# `-presets ./presets.json` would drop one here.
+/presets.json
+/backend/presets.json
+
+# ── Coverage and misc ──
 coverage/
 *.tgz
-
-# OS swap files
-*.swp
+*.orig
+*.rej
