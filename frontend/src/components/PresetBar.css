@@ -1,0 +1,188 @@
+/* =====================================================================
+   Preset Bar — saved EQ library selector
+   ===================================================================== */
+
+.preset-bar {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+}
+
+.preset-bar:hover {
+  border-color: var(--line-bright);
+}
+
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.preset-label {
+  flex-shrink: 0;
+}
+
+.preset-select {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 260px;
+  min-height: 36px;
+  padding: 7px 9px;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+
+.preset-select:hover:not(:disabled) {
+  border-color: var(--accent-dim);
+}
+
+.preset-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preset-dirty {
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  animation: pop-in 0.26s var(--ease-spring), dirty-pulse 2.2s ease-in-out infinite 0.3s;
+}
+
+@keyframes dirty-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.preset-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* On phones the action row wraps to its own full-width line and the
+   buttons share it evenly rather than shrinking to unreadable slivers. */
+@media (max-width: 720px) {
+  .preset-actions {
+    width: 100%;
+    margin-left: 0;
+    margin-top: var(--sp-2);
+  }
+
+  .preset-actions .btn-ghost {
+    flex: 1 1 auto;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .preset-sep {
+    display: none;
+  }
+
+  .preset-name-input {
+    flex: 1 1 100%;
+    width: auto;
+    min-height: 40px;
+  }
+}
+
+.preset-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line-bright);
+  margin: 0 2px;
+}
+
+.preset-confirm-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ── Buttons ── */
+.btn-ghost {
+  padding: 5px 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-dim);
+  background: var(--bg-panel-raised);
+  transform: translateY(-1px);
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-ghost.btn-confirm,
+.btn-ghost.btn-flash {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.btn-ghost.btn-confirm:hover:not(:disabled),
+.btn-ghost.btn-flash:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.btn-ghost.btn-danger {
+  color: var(--danger);
+  border-color: rgba(255, 59, 78, 0.4);
+}
+
+.btn-ghost.btn-danger:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+  box-shadow: 0 0 10px var(--danger-glow);
+}
+
+/* ── Inline name entry ── */
+.preset-name-input {
+  width: 200px;
+  padding: 5px 8px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  outline: none;
+}
+
+.preset-name-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}

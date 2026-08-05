@@ -1,0 +1,38 @@
+.filter-curve {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--text-dim);
+  transition: color var(--transition);
+}
+
+.filter-curve.active,
+.filter-curve.hero {
+  color: var(--accent);
+}
+
+.filter-curve-axis {
+  stroke: var(--line-bright);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.filter-curve-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--transition);
+}
+
+.filter-curve.hero .filter-curve-line {
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+}
+
+.filter-curve-area {
+  transition: opacity var(--transition);
+}

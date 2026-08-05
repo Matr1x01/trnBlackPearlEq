@@ -1,0 +1,100 @@
+/* =====================================================================
+   TabNav — primary section switcher
+   ===================================================================== */
+
+.tab-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 5px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.tab-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    background var(--transition);
+}
+
+.tab-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--bg-panel-raised);
+}
+
+.tab-btn:active:not(.active) {
+  background: var(--bg-surface);
+}
+
+.tab-btn.active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.tab-icon {
+  font-size: 12px;
+  opacity: 0.85;
+  transition: opacity var(--transition);
+}
+
+.tab-btn.active .tab-icon {
+  opacity: 1;
+}
+
+/* ── Tablet: keep labels, tighten padding ── */
+@media (max-width: 1024px) {
+  .tab-btn {
+    padding: 10px 15px;
+  }
+}
+
+/* ── Mobile: full-width bar, equal thirds, larger touch targets ── */
+@media (max-width: 720px) {
+  .tab-nav {
+    width: 100%;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius);
+  }
+
+  .tab-btn {
+    flex: 1;
+    min-height: 46px;
+    padding: 10px 6px;
+    font-size: 12.5px;
+    gap: 7px;
+  }
+}
+
+@media (max-width: 420px) {
+  .tab-btn {
+    flex-direction: column;
+    gap: 4px;
+    min-height: 52px;
+    padding: 8px 4px;
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+  }
+
+  .tab-icon {
+    font-size: 14px;
+  }
+}

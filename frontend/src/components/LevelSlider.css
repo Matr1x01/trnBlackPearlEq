@@ -1,0 +1,197 @@
+/* =====================================================================
+   LevelSlider — filled-track range control
+   ===================================================================== */
+
+.level-slider {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.level-slider:last-child {
+  border-bottom: none;
+}
+
+.level-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 11px;
+}
+
+.level-slider-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transition), transform var(--transition);
+}
+
+.level-slider.dragging .level-slider-value {
+  color: var(--accent-bright);
+  transform: scale(1.06);
+}
+
+.level-slider.warned .level-slider-value {
+  color: var(--warning);
+}
+
+/* ── Rail ── */
+.level-slider-rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Centre notch for bipolar controls (balance) */
+.level-slider-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 9px;
+  margin-left: -1px;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: var(--line-bright);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Input ── */
+.level-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Track (WebKit) */
+.level-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 100px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0 var(--fill-start, 0%),
+    var(--accent-dim) var(--fill-start, 0%),
+    var(--accent) var(--fill-end, 0%),
+    var(--bg-surface) var(--fill-end, 0%) 100%
+  );
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.55);
+  transition: filter var(--transition);
+}
+
+/* Thumb (WebKit) */
+.level-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow:
+    0 0 0 0 var(--accent-wash),
+    0 2px 7px rgba(0, 0, 0, 0.7);
+  cursor: grab;
+  transition:
+    transform 0.16s var(--ease-spring),
+    box-shadow var(--transition),
+    border-color var(--transition);
+}
+
+.level-slider input[type="range"]:hover:not(:disabled)::-webkit-slider-thumb {
+  transform: scale(1.16);
+  box-shadow:
+    0 0 0 7px var(--accent-wash),
+    0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+.level-slider input[type="range"]:active:not(:disabled)::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 11px var(--accent-wash),
+    0 0 16px var(--accent-glow),
+    0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+.level-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 7px var(--accent-wash),
+    0 0 0 2px var(--accent-bright);
+}
+
+/* Track + thumb (Firefox) */
+.level-slider input[type="range"]::-moz-range-track {
+  height: 5px;
+  border-radius: 100px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0 var(--fill-start, 0%),
+    var(--accent-dim) var(--fill-start, 0%),
+    var(--accent) var(--fill-end, 0%),
+    var(--bg-surface) var(--fill-end, 0%) 100%
+  );
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.level-slider input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.7);
+  cursor: grab;
+  transition: transform 0.16s var(--ease-spring), box-shadow var(--transition);
+}
+
+.level-slider input[type="range"]:hover:not(:disabled)::-moz-range-thumb {
+  transform: scale(1.16);
+  box-shadow: 0 0 0 7px var(--accent-wash), 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+/* ── Warning ── */
+.level-slider.warned input[type="range"]::-webkit-slider-thumb {
+  border-color: var(--warning);
+}
+
+.level-slider.warned input[type="range"]::-moz-range-thumb {
+  border-color: var(--warning);
+}
+
+.level-slider-warning {
+  margin-top: 9px;
+  font-size: 11px;
+  color: var(--warning);
+  animation: rise-in 0.24s var(--ease);
+}
+
+/* ── Disabled ── */
+.level-slider.disabled {
+  opacity: 0.42;
+}
+
+.level-slider input[type="range"]:disabled {
+  cursor: not-allowed;
+}
+
+.level-slider input[type="range"]:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+  border-color: var(--text-dim);
+  background: var(--text-secondary);
+  box-shadow: none;
+}
+
+.level-slider input[type="range"]:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+  border-color: var(--text-dim);
+  background: var(--text-secondary);
+  box-shadow: none;
+}

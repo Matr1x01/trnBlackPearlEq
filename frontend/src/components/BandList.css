@@ -1,0 +1,308 @@
+/* =====================================================================
+   BandList — numeric editor for the 10 PEQ bands
+   Mobile-first: stacked cards, promoted to a table at >= 721px.
+   ===================================================================== */
+
+.band-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* The column header only makes sense once rows are actually a table */
+.band-list-header {
+  display: none;
+}
+
+/* ── Mobile card ── */
+.band-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  grid-template-areas:
+    "index enable type  gain"
+    "slider slider slider slider"
+    "freq  freq   q     q";
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-chassis);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background var(--transition), border-color var(--transition);
+  opacity: 0;
+  animation: rise-in 0.38s var(--ease) forwards;
+}
+
+.band-row:nth-child(2)  { animation-delay: 0.02s; }
+.band-row:nth-child(3)  { animation-delay: 0.04s; }
+.band-row:nth-child(4)  { animation-delay: 0.06s; }
+.band-row:nth-child(5)  { animation-delay: 0.08s; }
+.band-row:nth-child(6)  { animation-delay: 0.10s; }
+.band-row:nth-child(7)  { animation-delay: 0.12s; }
+.band-row:nth-child(8)  { animation-delay: 0.14s; }
+.band-row:nth-child(9)  { animation-delay: 0.16s; }
+.band-row:nth-child(10) { animation-delay: 0.18s; }
+.band-row:nth-child(11) { animation-delay: 0.20s; }
+
+.band-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transition: transform 0.22s var(--ease);
+}
+
+.band-row.active {
+  background: var(--bg-panel-raised);
+  border-color: var(--line-bright);
+}
+
+.band-row.active::before {
+  transform: scaleY(1);
+}
+
+.band-row-index  { grid-area: index; }
+.band-enable     { grid-area: enable; }
+.band-type       { grid-area: type; }
+.band-slider     { grid-area: slider; }
+.band-freq       { grid-area: freq; }
+.band-gain       { grid-area: gain; justify-self: end; }
+.band-q          { grid-area: q; justify-self: end; }
+
+.band-row-index {
+  color: var(--text-dim);
+  font-size: 11px;
+  transition: color var(--transition);
+}
+
+.band-row.active .band-row-index {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Controls ── */
+.band-row select {
+  min-height: 34px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  padding: 5px 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+
+.band-row select:hover:not(:disabled) {
+  border-color: var(--accent-dim);
+}
+
+.band-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.band-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.band-field input[type="number"] {
+  width: 62px;
+  min-height: 34px;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 5px 7px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.band-field input[type="number"]:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+
+.band-field input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+/* ── Gain slider (bipolar fill from centre) ── */
+.band-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.band-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 100px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0 var(--fill-start, 50%),
+    var(--accent-dim) var(--fill-start, 50%),
+    var(--accent) var(--fill-end, 50%),
+    var(--bg-surface) var(--fill-end, 50%) 100%
+  );
+}
+
+.band-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: transform 0.16s var(--ease-spring), box-shadow var(--transition);
+}
+
+.band-row input[type="range"]:hover:not(:disabled)::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 5px var(--accent-wash);
+}
+
+.band-row input[type="range"]:active:not(:disabled)::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px var(--accent-wash);
+}
+
+.band-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 100px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0 var(--fill-start, 50%),
+    var(--accent-dim) var(--fill-start, 50%),
+    var(--accent) var(--fill-end, 50%),
+    var(--bg-surface) var(--fill-end, 50%) 100%
+  );
+}
+
+.band-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+}
+
+/* ── Checkbox ── */
+.band-row input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+}
+
+/* ── Disabled ── */
+.band-list.disabled {
+  opacity: 0.45;
+}
+
+.band-list.disabled .band-row {
+  cursor: default;
+}
+
+.band-list input:disabled,
+.band-list select:disabled {
+  cursor: not-allowed;
+}
+
+/* =====================================================================
+   Tablet and up — single-line table rows
+   ===================================================================== */
+@media (min-width: 721px) {
+  .band-list {
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--bg-chassis);
+  }
+
+  .band-list-header {
+    display: grid;
+    grid-template-columns: 24px 20px 58px 96px minmax(120px, 1fr) 82px 96px;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 9px var(--sp-3);
+    background: var(--bg-panel-raised);
+    border-bottom: 1px solid var(--line);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .band-row {
+    display: grid;
+    grid-template-columns: 24px 20px 58px 96px minmax(120px, 1fr) 82px 96px;
+    grid-template-areas: none;
+    gap: var(--sp-3);
+    padding: 8px var(--sp-3);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+  }
+
+  .band-row:last-child {
+    border-bottom: none;
+  }
+
+  .band-row:hover {
+    background: var(--bg-panel-raised);
+  }
+
+  .band-row-index,
+  .band-enable,
+  .band-type,
+  .band-slider,
+  .band-freq,
+  .band-gain,
+  .band-q {
+    grid-area: auto;
+    justify-self: stretch;
+  }
+
+  .band-field input[type="number"] {
+    width: 56px;
+    min-height: 30px;
+    font-size: 11px;
+  }
+
+  .band-row select {
+    min-height: 30px;
+  }
+
+  .band-row input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+  }
+
+  .band-row input[type="range"] {
+    height: 18px;
+  }
+}

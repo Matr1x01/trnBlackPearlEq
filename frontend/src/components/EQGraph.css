@@ -1,0 +1,203 @@
+/* =====================================================================
+   EQGraph — combined response curve
+   Tuned light: thin strokes, low-contrast grid, small nodes.
+   ===================================================================== */
+
+.eq-graph-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg-chassis);
+  overflow: hidden;
+  transition: opacity var(--transition), border-color var(--transition);
+}
+
+.eq-graph-wrap.disabled {
+  opacity: 0.45;
+}
+
+.eq-graph {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  touch-action: none;
+}
+
+/* ── Grid ── */
+.grid-line {
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+
+.grid-line-zero {
+  stroke: var(--line-bright);
+  stroke-width: 1;
+  opacity: 0.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.grid-label {
+  fill: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Guide under focused band ── */
+.eq-guide {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
+  opacity: 0.28;
+  vector-effect: non-scaling-stroke;
+  transition: opacity var(--transition);
+}
+
+/* ── Curve ── */
+.response-fill {
+  pointer-events: none;
+  animation: fade-in 0.5s var(--ease);
+}
+
+.response-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 2400;
+  animation: curve-draw 1s var(--ease);
+}
+
+@keyframes curve-draw {
+  from { stroke-dashoffset: 2400; opacity: 0.2; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* ── Band nodes ── */
+.band-node-hit {
+  fill: transparent;
+  stroke: none;
+}
+
+.band-node-dot {
+  fill: var(--bg-chassis);
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  transition:
+    r 0.16s var(--ease-spring),
+    fill var(--transition),
+    stroke var(--transition);
+}
+
+.band-node.hot .band-node-dot {
+  r: 6;
+  fill: var(--accent);
+  stroke: var(--accent-bright);
+}
+
+.band-node.active .band-node-dot {
+  r: 6;
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.6;
+}
+
+.band-node.disabled .band-node-dot {
+  stroke: var(--text-dim);
+  fill: var(--bg-chassis);
+}
+
+.band-node.disabled.active .band-node-dot,
+.band-node.disabled.hot .band-node-dot {
+  fill: var(--text-dim);
+  stroke: var(--text-secondary);
+}
+
+/* Index label only surfaces for the focused/hovered node */
+.band-node-label {
+  fill: var(--accent-bright);
+  font-size: 9.5px;
+  font-weight: 600;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.band-node.active .band-node-label,
+.band-node.hot .band-node-label {
+  opacity: 1;
+}
+
+/* ── Readout chip ── */
+.eq-readout {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  font-size: 10.5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(12, 13, 16, 0.9);
+  backdrop-filter: blur(10px);
+  color: var(--text-secondary);
+  pointer-events: none;
+  transition: border-color var(--transition);
+  animation: fade-in 0.24s var(--ease);
+}
+
+.eq-readout.hovering {
+  border-color: var(--line-bright);
+}
+
+.eq-readout-idx {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.eq-readout-type {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.eq-readout-sep {
+  width: 1px;
+  height: 10px;
+  background: var(--line-bright);
+}
+
+.eq-readout .pos { color: var(--accent-bright); }
+.eq-readout .neg { color: #6aa9ff; }
+
+@media (max-width: 720px) {
+  .eq-readout {
+    position: static;
+    margin: 0 8px 8px;
+    justify-content: center;
+    background: transparent;
+    backdrop-filter: none;
+    border-color: transparent;
+  }
+}
+
+@media (max-width: 420px) {
+  .eq-readout {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

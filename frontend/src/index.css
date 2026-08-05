@@ -1,0 +1,213 @@
+/* =====================================================================
+   Global Design System — TRN Black Pearl Control
+   Palette: near-black chassis, crimson accent.
+   ===================================================================== */
+
+:root {
+  /* Surfaces — near-neutral blacks so the red reads as the only hue */
+  --bg-chassis:       #08090b;
+  --bg-panel:         #0f1013;
+  --bg-panel-raised:  #16171c;
+  --bg-surface:       #1e2027;
+
+  --line:             #202228;
+  --line-bright:      #32353f;
+
+  /* Accent */
+  --accent:           #ff2f45;
+  --accent-bright:    #ff6373;
+  --accent-dim:       #a8182a;
+  --accent-deep:      #6d0f1c;
+  --accent-glow:      rgba(255, 47, 69, 0.35);
+  --accent-glow-strong: rgba(255, 47, 69, 0.62);
+  --accent-wash:      rgba(255, 47, 69, 0.10);
+  --accent-wash-soft: rgba(255, 47, 69, 0.05);
+
+  /* Semantics */
+  --success:          #2ee08a;
+  --success-glow:     rgba(46, 224, 138, 0.35);
+  --warning:          #f5a623;
+  --danger:           #ff3b4e;
+  --danger-glow:      rgba(255, 59, 78, 0.35);
+
+  --text-primary:     #edeef2;
+  --text-secondary:   #8d92a0;
+  --text-dim:         #565a67;
+
+  --font-body:        "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:        "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  /* Radius scale — one step per surface size, used consistently */
+  --radius-sm:        8px;
+  --radius:           12px;
+  --radius-lg:        16px;
+
+  /* Soft, low-contrast shadows: flat surfaces, gentle separation */
+  --shadow-panel:     0 4px 24px rgba(0, 0, 0, 0.28);
+  --shadow-card:      0 1px 3px rgba(0, 0, 0, 0.22);
+  --shadow-lift:      0 6px 20px rgba(0, 0, 0, 0.3);
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 28px;
+
+  /* Minimum comfortable touch target */
+  --touch: 44px;
+
+  /* One easing everywhere so motion feels like a single system */
+  --ease:             cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition:       0.18s var(--ease);
+  --transition-slow:  0.34s var(--ease);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-chassis);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  /* Stops iOS bumping type size when the device rotates */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Nothing may push the viewport sideways */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: #fff;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-bright);
+  border-radius: 100px;
+  border: 2.5px solid transparent;
+  background-clip: content-box;
+  transition: background var(--transition);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-dim);
+  background-clip: content-box;
+}
+
+/* ── Utilities ── */
+.mono { font-family: var(--font-mono); }
+
+.label-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* ── Shared button shapes ── */
+.btn-outline {
+  width: 100%;
+  padding: 9px 14px;
+  background: var(--bg-chassis);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background var(--transition),
+    transform var(--transition);
+}
+
+.btn-outline:hover:not(:disabled) {
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+  background: var(--accent-wash-soft);
+}
+
+.btn-outline:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-outline:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Coarse pointers get full-size targets on every control */
+@media (pointer: coarse) {
+  button,
+  .btn-outline,
+  .btn-primary,
+  select {
+    min-height: var(--touch);
+  }
+}
+
+/* ── Shared keyframes ── */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
