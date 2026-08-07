@@ -65,6 +65,10 @@ vendor/
 *.msi
 *.msi.zip
 
+# Exception: release binaries linked from the README's Downloads section.
+!/builds/*.deb
+!/builds/*.exe
+
 # ── Generic build outputs ──
 /dist/
 /build/
