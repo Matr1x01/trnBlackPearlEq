@@ -7,7 +7,7 @@
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)](#installation)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)](#-downloads)
 [![License](https://img.shields.io/badge/license-TBD-inactive)](#license)
 
 ![The parametric EQ editor with the preset library docked alongside it](docs/screenshots/eq-desktop.png)
@@ -39,6 +39,52 @@ This project replaces it. It's a self-contained control panel that talks to the 
 
 > [!NOTE]
 > This is an unofficial, community-built project. It is not affiliated with or endorsed by TRN.
+
+---
+
+## 📦 Downloads
+
+Don't want to build from source? Download a ready-to-run build:
+
+| Platform | Download |
+|---|---|
+| 🐧 Linux (Debian/Ubuntu) | [Download .deb](<builds/TRN Black Pearl Control_0.1.0_amd64.deb>) |
+| 🪟 Windows | [Download .exe](<builds/TRN Black Pearl Control_0.1.0_x64-setup.exe>) |
+
+Both are the current `v0.1.0` build.
+
+> [!NOTE]
+> Future releases will also be published on the [GitHub Releases](../../releases) page. Until
+> then, the latest builds live in [`builds/`](builds/).
+
+### Installing
+
+**Linux (`.deb`)**
+
+```bash
+sudo dpkg -i "builds/TRN Black Pearl Control_0.1.0_amd64.deb"
+sudo apt -f install   # pulls in any dependencies dpkg couldn't resolve on its own
+```
+
+Or, if your desktop environment supports it, just double-click the `.deb` file to install it
+through your package manager's GUI (GNOME Software, Discover, etc.).
+
+Either way, USB HID access still needs the one-time udev rule covered in
+[Prerequisites](#prerequisites) below — that's a hardware permission, not a build step, so it
+applies whether you installed the package or built it yourself.
+
+**Windows (`.exe`)**
+
+1. Download the installer above.
+2. Run the `.exe`.
+3. Follow the installation wizard.
+
+The app isn't code-signed, so Windows SmartScreen will likely flag it as unrecognized the first
+time you run it. If you trust the file (or built it yourself), click **More info → Run anyway**
+to continue.
+
+Prefer to build it yourself, audit the code first, or need a platform without a prebuilt
+package? See [Building from Source](#building-from-source) below.
 
 ---
 
@@ -77,23 +123,6 @@ This project replaces it. It's a self-contained control panel that talks to the 
 - Responsive layout for desktop, tablet, and mobile
 - Flat dark theme with a red accent
 - Preset library remains editable while the DAC is unplugged
-
-**Desktop app**
-- Native Linux desktop window via Tauri, packaged as a `.deb`
-- Bundles the backend as a managed sidecar — one install, nothing else to run
-- Shuts the backend down with the window, even if the app is force-killed
-
-### Roadmap
-
-- [ ] AppImage and Windows / macOS builds
-- [ ] AutoEQ / Squiglink profile import
-- [ ] Multiple device profiles
-- [ ] Additional colour themes
-- [ ] Firmware update support
-- [ ] Resizable preset dock
-- [ ] Packaged binaries and installers
-
----
 
 ## Screenshots
 
@@ -137,7 +166,11 @@ This project replaces it. It's a self-contained control panel that talks to the 
 ![Headroom indicator warning state](docs/screenshots/headroom.png)
 -->
 
-## Installation
+## Building from Source
+
+Not required if you just want to run the app — grab a prebuilt package from
+[Downloads](#-downloads) instead. This section is for developers who want to modify the code,
+run it on a platform without a prebuilt package, or build it themselves.
 
 ### Prerequisites
 

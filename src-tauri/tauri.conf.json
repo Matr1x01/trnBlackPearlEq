@@ -29,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage"],
+    "targets": "all",
     "category": "Music",
     "shortDescription": "Control panel for the TRN Black Pearl USB DAC",
     "longDescription": "Parametric EQ, preset library, and full device control for the TRN Black Pearl (TE-C) USB DAC. Talks to the device directly over USB HID; everything stays local.",
