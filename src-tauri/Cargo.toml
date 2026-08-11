@@ -1,6 +1,6 @@
 [package]
 name = "trncontrol"
-version = "0.1.0"
+version = "0.1.1"
 description = "TRN Black Pearl (TE-C) DAC Control Panel"
 authors = ["TRN Black Pearl Control contributors"]
 edition = "2021"
