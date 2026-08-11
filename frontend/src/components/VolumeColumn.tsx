@@ -5,9 +5,6 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import LevelSlider from "./LevelSlider";
 import "./VolumeColumn.css";
 
-/** Boost, in dB, that fills the headroom meter end to end. */
-const METER_SPAN_DB = 12;
-
 interface Props {
   volume: number;
   bands: EQBand[];
@@ -22,8 +19,16 @@ export default function VolumeColumn({ volume, bands, disabled, onChange, onComm
   const stacked = useMediaQuery("(max-width: 720px)");
   const hr = analyzeHeadroom(bands, volume);
 
-  const used = Math.min(Math.max(hr.peakGainDb, 0), METER_SPAN_DB);
-  const usedPct = (used / METER_SPAN_DB) * 100;
+  // The meter reads the ceiling as full scale: the fill is how much of the
+  // boost available at this volume the EQ has spent, so a full bar is the
+  // moment EQ + volume runs out of range. A zero ceiling (full volume) means
+  // any boost at all is already over.
+  const usedPct =
+    hr.peakGainDb <= 0
+      ? 0
+      : hr.ceilingDb <= 0
+        ? 100
+        : Math.min(hr.peakGainDb / hr.ceilingDb, 1) * 100;
 
   const note =
     hr.peakGainDb <= 0.05
@@ -34,10 +39,14 @@ export default function VolumeColumn({ volume, bands, disabled, onChange, onComm
     <div
       className={`vol-headroom status-${hr.status}`}
       title={
-        hr.peakGainDb > 0.05
-          ? `A full-scale signal at ${formatHz(hr.peakFreqHz)} would exceed 0 dBFS by ` +
-            `${hr.peakGainDb.toFixed(1)} dB. Cut that much to stay clean.`
-          : "The EQ applies no boost, so nothing can overshoot 0 dBFS."
+        hr.peakGainDb <= 0.05
+          ? "The EQ applies no boost, so the output cannot overshoot at any volume."
+          : hr.headroomDb < 0
+            ? `A full-scale signal at ${formatHz(hr.peakFreqHz)} needs +${hr.peakGainDb.toFixed(1)} dB, ` +
+              `but only +${hr.ceilingDb.toFixed(1)} dB fits at ${volume}% volume. Lower the volume by ` +
+              `${Math.abs(hr.headroomDb).toFixed(1)} dB worth, or cut the offending bands.`
+            : `The EQ peaks at +${hr.peakGainDb.toFixed(1)} dB and the DAC can take +${hr.ceilingDb.toFixed(1)} dB ` +
+              `at ${volume}% volume, leaving ${hr.headroomDb.toFixed(1)} dB spare.`
       }
     >
       <div className="vol-headroom-top">
@@ -51,9 +60,11 @@ export default function VolumeColumn({ volume, bands, disabled, onChange, onComm
         {Math.abs(hr.headroomDb).toFixed(1)} dB
       </div>
       <div className="vol-headroom-note">{note}</div>
-      {hr.masterBoosting && hr.peakGainDb > 0.05 && (
+      {/* Only worth the line once the volume is high enough to be part of the
+          problem -- below that the ceiling is tens of dB away. */}
+      {hr.peakGainDb > 0.05 && hr.ceilingDb < 12 && (
         <div className="vol-headroom-note vol-headroom-master">
-          +{hr.volumeDb.toFixed(1)} dB master on top
+          +{hr.ceilingDb.toFixed(1)} dB ceiling at {volume}% volume
         </div>
       )}
     </div>

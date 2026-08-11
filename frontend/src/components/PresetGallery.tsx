@@ -25,6 +25,8 @@ interface Props {
   presets: Preset[];
   selectedId: string | null;
   dirty: boolean;
+  /** Preset whose EQ the DAC is currently holding, if one was identified. */
+  onDeviceId: string | null;
   busy: boolean;
   onApply: (id: string) => void;
   onSaveCurrent: (name: string) => void;
@@ -44,6 +46,7 @@ export default function PresetGallery({
   presets,
   selectedId,
   dirty,
+  onDeviceId,
   busy,
   onApply,
   onSaveCurrent,
@@ -226,6 +229,7 @@ export default function PresetGallery({
                 preset={p}
                 active={p.id === selectedId}
                 dirty={dirty}
+                onDevice={p.id === onDeviceId}
                 busy={busy}
                 onApply={onApply}
                 onRename={onRename}

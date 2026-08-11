@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -16,6 +18,22 @@ import (
 // pauses before latching; applying a whole preset needs the same
 // courtesy between bands.
 const interBandDelay = 8 * time.Millisecond
+
+// flashSettle is how long the device is left alone after a flash command
+// before we read from it again. The reference implementation waits 200ms for
+// the physical write; we allow a little more, since being slow here only
+// delays a button the user pressed deliberately.
+const flashSettle = 250 * time.Millisecond
+
+// Tolerances for comparing a read-back band against what we asked the device
+// to store. Values make a round trip through float32 biquad coefficients and
+// fixed-point freq/Q/gain fields, so exact equality is the wrong test --
+// these match the frontend's bandsEqual.
+const (
+	freqToleranceHz = 0.5
+	qTolerance      = 0.005
+	gainToleranceDB = 0.05
+)
 
 // --- /api/presets ---
 
@@ -145,7 +163,10 @@ func (s *Server) handlePresetApply(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 	if body.Flash {
-		if err := s.dev.Send(hidproto.FlashSavePacket()); err != nil {
+		// Verify against the preset itself: at this point we know exactly
+		// what the device was told to hold, so the read-back can check the
+		// values rather than just that it answered.
+		if err := s.flashAndVerify(p.Bands); err != nil {
 			writeErr(w, http.StatusBadGateway, err)
 			return
 		}
@@ -156,7 +177,86 @@ func (s *Server) handlePresetApply(w http.ResponseWriter, r *http.Request, id st
 	if used, err := s.presets.MarkUsed(id); err == nil {
 		p = used
 	}
-	writeJSON(w, map[string]any{"ok": true, "flashed": body.Flash, "preset": p})
+	writeJSON(w, map[string]any{"ok": true, "flashed": body.Flash, "verified": body.Flash, "preset": p})
+}
+
+// flashAndVerify persists the device's current buffer and then confirms the
+// result by reading it back.
+//
+// The device sends no response to the flash command -- the reference
+// implementation fires it and sleeps, and nothing in its dispatch table
+// handles a reply (see docs/pyblackpearl-findings.md §3). So a successful
+// hid.Write proves only that bytes reached the kernel; it says nothing about
+// the device. Instead we let the write settle and then read all ten bands
+// back over HID, which does prove two things:
+//
+//   - the DAC survived the flash write and is answering again (a device that
+//     was unplugged mid-write, or wedged by it, fails here);
+//   - its live buffer holds the values we asked it to persist.
+//
+// What it cannot prove is that the flash cells were burned: that only shows
+// up after a power cycle, and no host-side check can substitute for one.
+// Callers should describe success as "the device confirmed the state", which
+// is what was actually observed. Pass nil for expect to skip the value
+// comparison and check liveness only.
+func (s *Server) flashAndVerify(expect []presets.Band) error {
+	if err := s.dev.Send(hidproto.FlashSavePacket()); err != nil {
+		return err
+	}
+	time.Sleep(flashSettle)
+
+	for idx := 0; idx < presets.BandCount; idx++ {
+		resp, err := s.dev.RequestSync(hidproto.ReadPEQPacket(byte(idx)), peqKey(idx), requestTimeout)
+		if err != nil {
+			return fmt.Errorf("flash save unconfirmed: device stopped responding after the write (band %d): %w", idx, err)
+		}
+		res, err := hidproto.ParsePEQResponse(resp)
+		if err != nil {
+			return fmt.Errorf("flash save unconfirmed: unreadable response for band %d: %w", idx, err)
+		}
+		s.activeSlot = res.ActiveSlot
+		if expect == nil {
+			continue
+		}
+		if err := bandMatches(expect[idx], res.Band); err != nil {
+			return fmt.Errorf("flash save unconfirmed: band %d %w", idx+1, err)
+		}
+	}
+	return nil
+}
+
+// bandMatches reports whether the device is holding the band we sent it.
+// Disabled bands are written with their gain forced to zero (see
+// hidproto.WritePEQPacket), so that is what must come back -- and since a
+// zero-gain band is inaudible whatever its frequency, only the gain is
+// checked for those.
+func bandMatches(want presets.Band, got hidproto.Band) error {
+	wantGain := want.GainDB
+	if !want.Enabled {
+		wantGain = 0
+	}
+	// The device snaps sub-0.25 dB gains to zero on read; treat anything we
+	// asked for below that threshold as zero too, or the comparison would
+	// fail on a value the hardware cannot report back.
+	if math.Abs(wantGain) < 0.25 {
+		wantGain = 0
+	}
+	if math.Abs(got.GainDB-wantGain) > gainToleranceDB {
+		return fmt.Errorf("reads back at %.2f dB, expected %.2f dB", got.GainDB, wantGain)
+	}
+	if wantGain == 0 {
+		return nil
+	}
+	if got.Type.String() != want.Type {
+		return fmt.Errorf("reads back as %s, expected %s", got.Type, want.Type)
+	}
+	if math.Abs(got.FreqHz-want.FreqHz) > freqToleranceHz {
+		return fmt.Errorf("reads back at %.0f Hz, expected %.0f Hz", got.FreqHz, want.FreqHz)
+	}
+	if math.Abs(got.Q-want.Q) > qTolerance {
+		return fmt.Errorf("reads back at Q %.3f, expected Q %.3f", got.Q, want.Q)
+	}
+	return nil
 }
 
 // applyBands pushes a full band set to the hardware. It refreshes the

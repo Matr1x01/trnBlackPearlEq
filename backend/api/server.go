@@ -347,10 +347,20 @@ func (s *Server) handleLatch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]bool{"ok": true})
 }
 
+// handleFlash persists whatever the device currently holds. Unlike the
+// preset-apply path there is no known target to compare against -- this
+// flashes the live buffer, including hand edits that were never saved -- so
+// verification is limited to confirming the device answered a read afterwards
+// rather than checking specific values. See flashAndVerify for why the flash
+// command itself cannot be acknowledged.
 func (s *Server) handleFlash(w http.ResponseWriter, r *http.Request) {
-	if err := s.dev.Send(hidproto.FlashSavePacket()); err != nil {
+	if !s.dev.IsOpen() {
+		writeErr(w, http.StatusServiceUnavailable, hidproto.ErrNotConnected)
+		return
+	}
+	if err := s.flashAndVerify(nil); err != nil {
 		writeErr(w, http.StatusBadGateway, err)
 		return
 	}
-	writeJSON(w, map[string]bool{"ok": true})
+	writeJSON(w, map[string]bool{"ok": true, "verified": true})
 }

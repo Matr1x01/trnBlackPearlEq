@@ -57,6 +57,55 @@
   transition: opacity var(--transition);
 }
 
+/* ── Output ceiling ──
+   Volume and EQ boost share one maximum gain, so the ceiling is a line in
+   the same dB axis as the curve: the shaded strip above it is output the
+   DAC cannot produce at the current volume. Quiet while there is room,
+   and it only appears at all above ~76% volume, where it comes on scale. */
+.eq-ceiling {
+  pointer-events: none;
+  animation: fade-in 0.3s var(--ease);
+}
+
+.eq-ceiling-zone {
+  fill: var(--warning);
+  opacity: 0.05;
+  /* Re-enabled on the zone alone so its <title> can explain the state. Band
+     nodes are drawn after this group, so they still win the hit test. */
+  pointer-events: auto;
+}
+
+.eq-ceiling-line {
+  stroke: var(--warning);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+  opacity: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.eq-ceiling-label {
+  fill: var(--warning);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  opacity: 0.62;
+}
+
+/* Once the curve crosses it, the ceiling stops being an FYI. */
+.eq-ceiling.exceeded .eq-ceiling-zone {
+  fill: var(--danger);
+  opacity: 0.1;
+}
+
+.eq-ceiling.exceeded .eq-ceiling-line {
+  stroke: var(--danger);
+  opacity: 0.9;
+}
+
+.eq-ceiling.exceeded .eq-ceiling-label {
+  fill: var(--danger);
+  opacity: 1;
+}
+
 /* ── Curve ── */
 .response-fill {
   pointer-events: none;
@@ -78,6 +127,15 @@
 @keyframes curve-draw {
   from { stroke-dashoffset: 2400; opacity: 0.2; }
   to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* The same path redrawn clipped to the region above the ceiling. It appears
+   and disappears mid-session, so it must not replay the draw-on animation. */
+.response-curve.over-ceiling {
+  stroke: var(--danger);
+  stroke-width: 2.4;
+  stroke-dasharray: none;
+  animation: none;
 }
 
 /* ── Band nodes ── */

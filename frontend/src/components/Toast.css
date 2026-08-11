@@ -1,0 +1,132 @@
+/* =====================================================================
+   Toast — transient confirmation for an action the user just took
+   ===================================================================== */
+
+.toast-stack {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  /* The stack spans the corner but only the cards themselves are clickable,
+     so it never swallows presses on the UI behind it. */
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: max-content;
+  max-width: min(360px, calc(100vw - var(--sp-4) * 2));
+  padding: 11px 12px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--line-bright);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  animation: rise-in 0.22s var(--ease) both;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.toast-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toast-message {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.toast-detail {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.toast-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+/* ── Kinds ── */
+.toast-success {
+  border-left-color: var(--success);
+}
+
+.toast-success .toast-icon {
+  background: rgba(46, 224, 138, 0.16);
+  color: var(--success);
+}
+
+.toast-error {
+  border-left-color: var(--danger);
+}
+
+.toast-error .toast-icon {
+  background: rgba(255, 59, 78, 0.16);
+  color: var(--danger);
+}
+
+.toast-info {
+  border-left-color: var(--line-bright);
+}
+
+.toast-info .toast-icon {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+/* ── Mobile: full width along the bottom, above the thumb ── */
+@media (max-width: 720px) {
+  .toast-stack {
+    left: var(--sp-3);
+    right: var(--sp-3);
+    bottom: var(--sp-3);
+    align-items: stretch;
+  }
+
+  .toast {
+    width: auto;
+    max-width: none;
+  }
+}
