@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { EQBand } from "../api/client";
 import { combinedResponseDb } from "../dsp/biquad";
+import { ceilingDbAt } from "../dsp/headroom";
 import "./EQGraph.css";
 
 const WIDTH = 860;
@@ -35,6 +36,11 @@ function yToDb(y: number) {
 interface Props {
   bands: EQBand[];
   activeIndex: number;
+  /**
+   * Master volume, 0-100. Used only to place the output ceiling; the curve
+   * itself stays pure EQ gain.
+   */
+  volumePercent: number;
   onSelect: (idx: number) => void;
   /** Called continuously while dragging (freq/gain preview). */
   onDrag: (idx: number, freqHz: number, gainDb: number) => void;
@@ -46,6 +52,7 @@ interface Props {
 export default function EQGraph({
   bands,
   activeIndex,
+  volumePercent,
   onSelect,
   onDrag,
   onCommit,
@@ -54,21 +61,45 @@ export default function EQGraph({
   const svgRef = useRef<SVGSVGElement>(null);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  // Scoped so a second graph on the page cannot capture this one's clip.
+  // useId embeds colons, which are legal in an id but awkward inside url(#…),
+  // so they are stripped.
+  const clipId = `eq-over-ceiling-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   // 2px sampling keeps the crest of a high-Q band from looking faceted.
-  const { curvePath, fillPath } = useMemo(() => {
+  const { curvePath, fillPath, peakDb } = useMemo(() => {
     const step = 2;
     let d = "";
+    let peak = 0;
     for (let x = PAD_L; x <= PAD_L + PLOT_W; x += step) {
-      const y = dbToY(combinedResponseDb(bands, xToFreq(x)));
-      d += (x === PAD_L ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
+      const db = combinedResponseDb(bands, xToFreq(x));
+      if (db > peak) peak = db;
+      d += (x === PAD_L ? "M" : "L") + x.toFixed(1) + " " + dbToY(db).toFixed(1) + " ";
     }
     const zeroY = dbToY(0);
     return {
       curvePath: d.trim(),
       fillPath: `${d} L${(PAD_L + PLOT_W).toFixed(1)} ${zeroY} L${PAD_L} ${zeroY} Z`,
+      // Taken from the sampled curve rather than an independent sweep, so the
+      // "is it over?" verdict always agrees with what is actually drawn.
+      peakDb: peak,
     };
   }, [bands]);
+
+  // ── Output ceiling ────────────────────────────────────────────────────
+  // Master volume and EQ boost are drawn from the same maximum gain the
+  // output stage can represent (docs/pyblackpearl-findings.md §1), so the
+  // boost still available is VOL_MAX_DB - volumeDb. Because that lives in
+  // the same dB units as the curve, it plots as a line on this very axis:
+  // wherever the curve rises above it, EQ + volume overshoots the device's
+  // maximum. Volume is deliberately not added to the curve -- that would
+  // stop it being the filter response.
+  const ceilingDb = ceilingDbAt(volumePercent);
+  // Above MAX_DB there is more headroom than the graph shows; the line is
+  // off-scale and there is nothing to warn about, so it stays hidden.
+  const ceilingVisible = ceilingDb < MAX_DB;
+  const ceilingY = dbToY(Math.min(ceilingDb, MAX_DB));
+  const overCeiling = ceilingVisible && peakDb > ceilingDb;
 
   const toSvgPoint = (clientX: number, clientY: number) => {
     const svg = svgRef.current!;
@@ -120,6 +151,14 @@ export default function EQGraph({
             <stop offset="60%" stopColor="var(--accent)" stopOpacity="0.04" />
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </linearGradient>
+
+          {/* Everything above the ceiling. Redrawing the curve through this
+              recolours only the segments that actually overshoot, which
+              points at the bands responsible instead of just saying "some
+              part of this clips". */}
+          <clipPath id={clipId}>
+            <rect x={PAD_L} y={PAD_T} width={PLOT_W} height={Math.max(0, ceilingY - PAD_T)} />
+          </clipPath>
         </defs>
 
         {/* dB grid */}
@@ -170,8 +209,36 @@ export default function EQGraph({
           />
         )}
 
+        {/* ── Output ceiling: how much boost is left at this volume ── */}
+        {ceilingVisible && (
+          <g className={`eq-ceiling ${overCeiling ? "exceeded" : ""}`}>
+            <title>
+              {overCeiling
+                ? `The curve peaks at +${peakDb.toFixed(1)} dB but only +${ceilingDb.toFixed(1)} dB ` +
+                  `of boost fits at ${Math.round(volumePercent)}% volume. Lower the volume or cut the ` +
+                  `offending bands.`
+                : `At ${Math.round(volumePercent)}% volume the DAC can still take +${ceilingDb.toFixed(1)} dB ` +
+                  `of EQ boost before its output stage runs out of range.`}
+            </title>
+            <rect
+              x={PAD_L}
+              y={PAD_T}
+              width={PLOT_W}
+              height={Math.max(0, ceilingY - PAD_T)}
+              className="eq-ceiling-zone"
+            />
+            <line x1={PAD_L} x2={PAD_L + PLOT_W} y1={ceilingY} y2={ceilingY} className="eq-ceiling-line" />
+            <text x={PAD_L + 7} y={ceilingY - 6} className="eq-ceiling-label mono">
+              {`DAC ceiling · +${ceilingDb.toFixed(1)} dB left at ${Math.round(volumePercent)}% volume`}
+            </text>
+          </g>
+        )}
+
         <path d={fillPath} fill="url(#eqFill)" className="response-fill" />
         <path d={curvePath} className="response-curve" />
+        {overCeiling && (
+          <path d={curvePath} className="response-curve over-ceiling" clipPath={`url(#${clipId})`} />
+        )}
 
         {/* band nodes */}
         {bands.map((b, idx) => {

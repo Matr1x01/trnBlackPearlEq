@@ -55,7 +55,7 @@
   overflow: hidden;
 }
 
-/* The menu escapes the preview's clip by sitting outside it. */
+/* The ⋯ button escapes the preview's clip by sitting outside it. */
 .preset-menu-wrap {
   position: absolute;
   top: 0;
@@ -128,12 +128,15 @@
   }
 }
 
-/* ── Overflow menu ── */
+/* ── Overflow menu ──
+   Rendered into <body> and positioned from the button's viewport rect (see
+   PresetCard.tsx). It cannot live inside the card: `rise-in`'s forwards fill
+   leaves a transform on every card, which makes each one a stacking context
+   that a menu can never escape, and the docked gallery's scroller clips
+   anything hanging past a card's bottom edge. */
 .preset-menu {
-  position: absolute;
-  top: 38px;
-  right: 6px;
-  z-index: 20;
+  position: fixed;
+  z-index: 400;
   min-width: 158px;
   display: flex;
   flex-direction: column;
@@ -144,6 +147,15 @@
   box-shadow: var(--shadow-lift);
   animation: pop-in 0.14s var(--ease);
   transform-origin: top right;
+}
+
+/* Keep the ⋯ visible while its menu is open, or the control the user is
+   acting on fades out from under them on hover-capable pointers. */
+.preset-menu-btn[aria-expanded="true"] {
+  opacity: 1;
+  color: var(--text-primary);
+  border-color: var(--line-bright);
+  background: var(--bg-surface);
 }
 
 .preset-menu button {
@@ -203,6 +215,13 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   animation: pop-in 0.22s var(--ease-spring);
+}
+
+/* Confirmed by fingerprint against what the DAC reported, rather than just
+   "the card you last clicked" -- worth distinguishing. */
+.preset-active-tag.on-device {
+  background: var(--success);
+  color: #06210f;
 }
 
 /* ── Body ── */

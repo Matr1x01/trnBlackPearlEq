@@ -88,7 +88,13 @@ export const api = {
     req<EQBand>(`/api/eq/${idx}`, { method: "PUT", body: JSON.stringify(band) }),
 
   latch: () => req<{ ok: boolean }>("/api/latch", { method: "POST" }),
-  flash: () => req<{ ok: boolean }>("/api/flash", { method: "POST" }),
+  /**
+   * Persists the device's live buffer. Resolves only once the backend has
+   * read the DAC back and confirmed it responded (`verified`); it rejects if
+   * the device went quiet or disagreed. The flash command itself is not
+   * acknowledged by the hardware -- see docs/pyblackpearl-findings.md §3.
+   */
+  flash: () => req<{ ok: boolean; verified: boolean }>("/api/flash", { method: "POST" }),
 
   listPresets: () => req<{ presets: Preset[] }>("/api/presets").then((r) => r.presets ?? []),
   createPreset: (name: string, bands: EQBand[], target = "") =>
@@ -104,9 +110,13 @@ export const api = {
     }),
   deletePreset: (id: string) =>
     req<{ ok: boolean }>(`/api/presets/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  /** Writes all 10 bands to the DAC and latches them; flash also persists them. */
+  /**
+   * Writes all 10 bands to the DAC and latches them; flash also persists
+   * them, in which case the response is only sent after the backend has read
+   * every band back and confirmed the device holds this preset.
+   */
   applyPreset: (id: string, flash = false) =>
-    req<{ ok: boolean; flashed: boolean; preset: Preset }>(
+    req<{ ok: boolean; flashed: boolean; verified: boolean; preset: Preset }>(
       `/api/presets/${encodeURIComponent(id)}/apply`,
       { method: "POST", body: JSON.stringify({ flash }) }
     ),

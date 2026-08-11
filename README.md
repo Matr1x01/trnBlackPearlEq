@@ -102,10 +102,15 @@ package? See [Building from Source](#building-from-source) below.
 - Continuously analyses the EQ curve for the peak boost it applies
 - Reports the recommended preamp cut needed to stay below 0 dBFS
 - Green / amber / red status with a live meter next to the volume control
+- Draws the DAC's output ceiling on the graph — master volume and EQ boost
+  share one maximum gain, so the ceiling drops as you turn up, and the part of
+  the curve that overshoots it is highlighted
 
 **Preset library**
 - Gallery of preset cards, each with a miniature EQ curve as a visual fingerprint
 - Apply any preset to the device with a single click
+- Recognises which saved preset the DAC is currently holding, by fingerprinting
+  the EQ itself — the device stores no preset ID — and marks it **on DAC**
 - Save, rename, duplicate, delete, and pin favourites
 - Tag presets with the headphone or IEM they were tuned for
 - Search by name or target; sort by name, recently used, created, or modified
@@ -340,6 +345,12 @@ Applying a preset changes the DAC live but does not persist it. Press **Save to 
 write the current state to the device so it survives being unplugged. Flash memory has a
 finite number of write cycles, so this is deliberately a separate, explicit action.
 
+The DAC does not acknowledge the flash command, so the app reads the device back
+afterwards and only reports success once the hardware answers with the values it was told
+to keep. A failure — an unplugged or unresponsive DAC, or a read-back that disagrees —
+says so instead of quietly claiming it worked. What no host-side check can prove is that
+the flash cells were burned; only a power cycle shows that.
+
 ---
 
 If you own a different TRN or TTGK device and want to help extend support, protocol captures
@@ -349,7 +360,9 @@ are especially useful.
 
 - **[cheesyserg/pyBlackPearl](https://github.com/cheesyserg/pyBlackPearl)** — the reverse
   engineering of the Black Pearl's HID protocol that made this project possible. This app's
-  device layer is built on that work.
+  device layer is built on that work. Notes on what it reveals about the hardware, and
+  which of its behaviours this project adopts, are in
+  [docs/pyblackpearl-findings.md](docs/pyblackpearl-findings.md).
 - The RBJ Audio EQ Cookbook, for the biquad formulas used by both the device and the UI.
 
 ## License

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, subscribeEvents } from "./api/client";
 import type { EQBand, FilterMode, GainMode, AmpMode, Preset } from "./api/client";
 import EQGraph from "./components/EQGraph";
@@ -12,6 +12,8 @@ import DeviceInfo from "./components/DeviceInfo";
 import FilterPanel from "./components/FilterPanel";
 import MicPanel from "./components/MicPanel";
 import VolumeColumn from "./components/VolumeColumn";
+import ToastStack, { useToasts } from "./components/Toast";
+import { matchPresetToDevice } from "./presets/fingerprint";
 import "./App.css";
 
 // Default flat 10-band EQ
@@ -53,8 +55,19 @@ export default function App() {
   const [activeIdx, setActiveIdx] = useState(0);
 
   const [presets, setPresets] = useState<Preset[]>([]);
+  const [presetsLoaded, setPresetsLoaded] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [presetBusy, setPresetBusy] = useState(false);
+
+  // The preset whose EQ the DAC is actually holding, when we can tell.
+  // Distinct from selectedPresetId, which is "what the editor is showing":
+  // the two diverge the moment the user edits a band.
+  const [onDeviceId, setOnDeviceId] = useState<string | null>(null);
+  // Bands as last read from the hardware. Every read produces a fresh array,
+  // so its identity is what marks a sync as already resolved.
+  const [deviceBands, setDeviceBands] = useState<EQBand[] | null>(null);
+
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts();
 
   const [tab, setTab] = useState<TabId>("eq");
   const [saving, setSaving] = useState(false);
@@ -90,7 +103,38 @@ export default function App() {
 
     const bandResults = await Promise.all(Array.from({ length: 10 }, (_, i) => api.getEQBand(i)));
     setBands(bandResults);
+    // Hand the fresh hardware state to the identification effect below.
+    setDeviceBands(bandResults);
   }, []);
+
+  // ── Identifying the DAC's current preset ────────────────────────────
+  // The device reports its ten bands but has no idea which of our presets
+  // they came from -- it does not store an ID. So we fingerprint the EQ
+  // content on both sides and match on that (see presets/fingerprint.ts).
+  //
+  // This runs once per hardware read. Waiting on presetsLoaded matters:
+  // the library loads on its own schedule (it works offline), and matching
+  // against an empty array would conclude "no match" and stop there.
+  // Read, not depended on: the effect must fire for a new hardware read, not
+  // every time the selection changes.
+  const selectedPresetIdRef = useRef<string | null>(null);
+  selectedPresetIdRef.current = selectedPresetId;
+  // Guards against re-resolving the same read when the library changes for an
+  // unrelated reason -- a rename must not re-run identification and stomp on
+  // a selection the user has since made.
+  const resolvedBandsRef = useRef<EQBand[] | null>(null);
+
+  useEffect(() => {
+    if (!deviceBands || !presetsLoaded) return;
+    if (resolvedBandsRef.current === deviceBands) return;
+    resolvedBandsRef.current = deviceBands;
+
+    // Null when nothing matches, which is the point: a mismatch must clear
+    // the selection rather than leave a stale card highlighted as active.
+    const matched = matchPresetToDevice(presets, deviceBands, selectedPresetIdRef.current);
+    setOnDeviceId(matched);
+    setSelectedPresetId(matched);
+  }, [deviceBands, presetsLoaded, presets]);
 
   // ── Initial load ────────────────────────────────────────────────────
   useEffect(() => {
@@ -137,7 +181,10 @@ export default function App() {
     api
       .listPresets()
       .then(setPresets)
-      .catch((e: any) => setError(e.message ?? "Failed to load presets"));
+      .catch((e: any) => setError(e.message ?? "Failed to load presets"))
+      // Set either way: a library that failed to load is still "done
+      // loading", and the identification effect must not wait forever.
+      .finally(() => setPresetsLoaded(true));
   }, []);
 
   // ── WebSocket push events ───────────────────────────────────────────
@@ -206,14 +253,18 @@ export default function App() {
   }, []);
 
   // ── EQ ──────────────────────────────────────────────────────────────
+  // Any hand edit means the DAC no longer holds the identified preset --
+  // it now holds that preset plus a change, which is a different thing.
   const handleBandChange = useCallback((idx: number, band: EQBand) => {
     const updated = { ...band, enabled: band.gainDb !== 0 ? true : band.enabled };
     setBands((prev) => prev.map((b, i) => (i === idx ? updated : b)));
+    setOnDeviceId(null);
   }, []);
 
   const handleBandCommit = useCallback(async (idx: number, band: EQBand) => {
     const updated = { ...band, enabled: band.gainDb !== 0 ? true : band.enabled };
     setBands((prev) => prev.map((b, i) => (i === idx ? updated : b)));
+    setOnDeviceId(null);
     try {
       await api.setEQBand(idx, updated);
     } catch {
@@ -227,6 +278,7 @@ export default function App() {
         i === idx ? { ...b, freqHz, gainDb, enabled: gainDb !== 0 ? true : b.enabled } : b,
       ),
     );
+    setOnDeviceId(null);
   }, []);
 
   const handleGraphCommit = useCallback(
@@ -234,6 +286,7 @@ export default function App() {
       const enabled = gainDb !== 0 ? true : bands[idx].enabled;
       const band = { ...bands[idx], freqHz, gainDb, enabled };
       setBands((prev) => prev.map((b, i) => (i === idx ? band : b)));
+      setOnDeviceId(null);
       try {
         await api.setEQBand(idx, band);
       } catch {
@@ -266,12 +319,19 @@ export default function App() {
       if (!preset) return;
       setSelectedPresetId(id);
       setBands(preset.bands.map((b) => ({ ...b })));
-      if (!connected) return;
+      if (!connected) {
+        // Nothing was written, so nothing is on the device.
+        setOnDeviceId(null);
+        return;
+      }
       runPresetAction(async () => {
         // The response carries the refreshed last-used stamp, which
         // "recently used" sorting depends on.
         const res = await api.applyPreset(id, false);
         setPresets((prev) => prev.map((p) => (p.id === res.preset.id ? res.preset : p)));
+        // The apply wrote all ten bands and latched them, so the DAC is now
+        // holding this preset -- no need to read back to know that.
+        setOnDeviceId(id);
       });
     },
     [presets, connected, runPresetAction],
@@ -396,20 +456,37 @@ export default function App() {
   // With a clean preset applied, re-send it before flashing so what gets
   // burned is exactly that preset. With unsaved edits on screen, flash
   // whatever is already live rather than silently discarding them.
+  //
+  // Both calls resolve only once the backend has read the DAC back and
+  // confirmed it (the flash command itself is never acknowledged -- see
+  // docs/pyblackpearl-findings.md §3). So the toast fires on a real device
+  // response, not on the click and not on a bare HTTP 200.
   const handleFlashSave = useCallback(async () => {
     setSaving(true);
     try {
       if (selectedPresetId && !presetDirty) {
-        await api.applyPreset(selectedPresetId, true);
+        const res = await api.applyPreset(selectedPresetId, true);
+        setPresets((prev) => prev.map((p) => (p.id === res.preset.id ? res.preset : p)));
+        setOnDeviceId(selectedPresetId);
+        pushToast(
+          "success",
+          "Preset saved to DAC flash",
+          `The DAC confirmed it is holding “${res.preset.name}”. It will survive a power cycle.`,
+        );
       } else {
         await api.flash();
+        pushToast(
+          "success",
+          "Settings saved to DAC flash",
+          "The DAC confirmed the write. The current EQ will survive a power cycle.",
+        );
       }
     } catch (e: any) {
-      setError(e.message);
+      pushToast("error", "Failed to save to DAC flash", e.message ?? "The DAC did not confirm the write.");
     } finally {
       setSaving(false);
     }
-  }, [selectedPresetId, presetDirty]);
+  }, [selectedPresetId, presetDirty, pushToast]);
 
   // ── Reset EQ ────────────────────────────────────────────────────────
   // Flattens all ten bands and writes them out. This only clears the EQ
@@ -424,6 +501,7 @@ export default function App() {
       }
       setBands(flat);
       setSelectedPresetId(null);
+      setOnDeviceId(null);
     } catch (e: any) {
       setError(e.message ?? "Reset failed");
     } finally {
@@ -557,9 +635,20 @@ export default function App() {
                       </p>
                     </div>
                     {selectedPreset && (
-                      <span className={`eq-active-preset ${presetDirty ? "dirty" : ""}`}>
+                      <span
+                        className={`eq-active-preset ${presetDirty ? "dirty" : ""}`}
+                        title={
+                          onDeviceId === selectedPreset.id
+                            ? "The DAC's EQ matches this preset"
+                            : "Loaded in the editor"
+                        }
+                      >
                         {selectedPreset.name}
-                        {presetDirty && <em> · edited</em>}
+                        {presetDirty ? (
+                          <em> · edited</em>
+                        ) : (
+                          onDeviceId === selectedPreset.id && <em> · on DAC</em>
+                        )}
                       </span>
                     )}
                   </div>
@@ -567,6 +656,7 @@ export default function App() {
                     <EQGraph
                       bands={bands}
                       activeIndex={activeIdx}
+                      volumePercent={volume}
                       onSelect={setActiveIdx}
                       onDrag={handleGraphDrag}
                       onCommit={handleGraphCommit}
@@ -598,6 +688,7 @@ export default function App() {
                   presets={presets}
                   selectedId={selectedPresetId}
                   dirty={presetDirty}
+                  onDeviceId={onDeviceId}
                   busy={presetBusy}
                   onApply={handleApplyPreset}
                   onSaveCurrent={handleSavePresetAs}
@@ -644,6 +735,8 @@ export default function App() {
           )}
         </main>
       </div>
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

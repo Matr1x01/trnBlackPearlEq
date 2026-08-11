@@ -9,23 +9,27 @@
  * a recommended preamp cut), and the fix is the same: attenuate first,
  * or lower the offending bands.
  *
- * Scope, and why:
+ * Where the master volume fits, and why that changed:
  *
- * - The verdict is driven by the EQ curve alone, because that part is
- *   unambiguous: a +6 dB peak needs 6 dB of cut, full stop.
- * - Master volume is reported alongside but deliberately NOT summed into
- *   the headroom figure. This device's volume spans about -37 dB to
- *   +25 dB (unity near 60%), and the HID protocol does not tell us
- *   whether that gain is digital, analogue makeup gain, or a mix -- nor
- *   whether it lands before or after the EQ stage. Summing +25 dB of it
- *   into a *digital* clipping number would assert a signal chain we
- *   cannot verify, and would flag a flat EQ at full volume as "clipping".
- * - What we can say is that boost stacked on boost is worse than either
- *   alone, so a positive master gain escalates an already-boosting EQ by
- *   one severity step.
- * - Worst case input is assumed: a full-scale signal at exactly the
- *   frequency where the EQ peaks. Real music rarely does that, so this
- *   errs toward warning early.
+ * - This used to report the EQ peak alone and refuse to sum the master in,
+ *   because the HID protocol does not say whether the volume register is
+ *   digital gain, analogue makeup gain, or where it sits relative to the
+ *   EQ stage.
+ * - The reference implementation answers it: it treats VolMaxRaw as the
+ *   largest gain the output stage can represent, shared between volume and
+ *   EQ boost, and flags clipping when
+ *   `volume_raw > VolMaxRaw - peak_eq_boost * UnitsPerDB`. See
+ *   docs/pyblackpearl-findings.md §1.
+ * - Rearranged, that is simply: the boost still available at the current
+ *   volume is `ceilingDb = VOL_MAX_DB - volumeDb`, and the EQ clips when
+ *   its peak exceeds it. That is the model used here.
+ * - This is inferred from a working implementation rather than from vendor
+ *   documentation, but it degrades safely in both directions: a flat EQ
+ *   never clips at any volume, and at low volume a large boost is correctly
+ *   reported as harmless.
+ * - Worst case input is still assumed: a full-scale signal at exactly the
+ *   frequency where the EQ peaks. Real music rarely does that, so this errs
+ *   toward warning early.
  */
 
 import type { EQBand } from "../api/client";
@@ -36,10 +40,24 @@ const VOL_MIN_RAW = -9472;
 const VOL_MAX_RAW = 6440;
 const UNITS_PER_DB = 256;
 
+/**
+ * The most gain the output stage can represent, in dB (+25.16). Volume and
+ * EQ boost both draw on it, so it is the ceiling the two are summed against.
+ */
+export const VOL_MAX_DB = VOL_MAX_RAW / UNITS_PER_DB;
+
 /** Volume slider percent -> dB, matching the Go conversion. */
 export function volumePercentToDb(percent: number): number {
   const raw = VOL_MIN_RAW + (percent / 100) * (VOL_MAX_RAW - VOL_MIN_RAW);
   return raw / UNITS_PER_DB;
+}
+
+/**
+ * EQ boost still available before the output stage saturates, in dB.
+ * Falls to 0 at full volume: there, any boost at all overshoots.
+ */
+export function ceilingDbAt(volumePercent: number): number {
+  return Math.max(0, VOL_MAX_DB - volumePercentToDb(volumePercent));
 }
 
 export type HeadroomStatus = "safe" | "caution" | "clipping";
@@ -51,9 +69,12 @@ export interface HeadroomResult {
   peakFreqHz: number;
   /** Master volume expressed in dB (negative below unity). */
   volumeDb: number;
-  /** True when the master is adding gain on top of the EQ. */
-  masterBoosting: boolean;
-  /** dB remaining before 0 dBFS. Negative means a full-scale signal clips. */
+  /** Boost the device can still accept at this volume, in dB. */
+  ceilingDb: number;
+  /**
+   * dB of boost left before EQ + volume exceeds the device maximum.
+   * Negative means a full-scale signal at peakFreqHz overshoots.
+   */
   headroomDb: number;
   status: HeadroomStatus;
 }
@@ -64,10 +85,15 @@ const STEPS = 256;
 
 /** Boost below this is rounding noise, not a real lift. */
 const NEGLIGIBLE_DB = 0.5;
-/** Above this much boost, a hot track will clip audibly. */
-const SEVERE_DB = 3;
+/** Headroom under this much is close enough to warn about. */
+const CAUTION_DB = 3;
 
-export function analyzeHeadroom(bands: EQBand[], volumePercent: number): HeadroomResult {
+/**
+ * Highest boost the EQ curve applies, and where. Volume plays no part --
+ * this is the property of the curve alone that drives the recommended
+ * preamp cut shown on preset cards.
+ */
+export function peakBoost(bands: EQBand[]): { peakGainDb: number; peakFreqHz: number } {
   // Log-spaced sweep: dense enough that a high-Q peak isn't stepped over.
   let peakGainDb = 0;
   let peakFreqHz = FREQ_MIN;
@@ -80,25 +106,35 @@ export function analyzeHeadroom(bands: EQBand[], volumePercent: number): Headroo
       peakFreqHz = f;
     }
   }
+  return { peakGainDb, peakFreqHz };
+}
+
+export function analyzeHeadroom(bands: EQBand[], volumePercent: number): HeadroomResult {
+  const { peakGainDb, peakFreqHz } = peakBoost(bands);
 
   const volumeDb = volumePercentToDb(volumePercent);
-  const masterBoosting = volumeDb > 0;
+  const ceilingDb = ceilingDbAt(volumePercent);
+  const headroomDb = ceilingDb - peakGainDb;
 
   let status: HeadroomStatus;
-  if (peakGainDb <= NEGLIGIBLE_DB) status = "safe";
-  else if (peakGainDb <= SEVERE_DB) status = "caution";
-  else status = "clipping";
-
-  // Boost on top of boost: escalate one step, but never from safe (a flat
-  // EQ has nothing for the master to amplify into clipping).
-  if (masterBoosting && status === "caution") status = "clipping";
+  if (peakGainDb <= NEGLIGIBLE_DB) {
+    // Nothing for the master to amplify into an overshoot, whatever the
+    // volume: a flat curve passes through at unity.
+    status = "safe";
+  } else if (headroomDb <= 0) {
+    status = "clipping";
+  } else if (headroomDb <= CAUTION_DB) {
+    status = "caution";
+  } else {
+    status = "safe";
+  }
 
   return {
     peakGainDb,
     peakFreqHz,
     volumeDb,
-    masterBoosting,
-    headroomDb: -peakGainDb,
+    ceilingDb,
+    headroomDb,
     status,
   };
 }
