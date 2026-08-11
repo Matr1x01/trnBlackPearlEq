@@ -11,7 +11,16 @@ import (
 	"trncontrol/presets"
 )
 
-const requestTimeout = 300 * time.Millisecond
+// RequestSync retries once, so a real timeout takes 2x this to surface.
+// 300ms was tuned against desktop hidapi; Android's USB Host API round trip
+// through UsbHidTransport (interrupt bulkTransfer, possibly via an OTG
+// adapter/hub) has been observed to occasionally land outside that budget
+// even when the device is behaving normally, surfacing as a spurious
+// "no response from device" error on reads while writes (which don't wait)
+// keep working. Widened for both platforms since desktop's happy path is
+// unaffected -- RequestSync returns as soon as the cache is populated,
+// regardless of how high this ceiling is.
+const requestTimeout = 700 * time.Millisecond
 
 type Server struct {
 	dev *hidproto.Device

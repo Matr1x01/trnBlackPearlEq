@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: lets content draw edge-to-edge and makes
+         env(safe-area-inset-*) report real values in the Android WebView
+         (App.css uses safe-area-inset-top for the header, since Android 15
+         enforces edge-to-edge with no opt-out). A no-op in the desktop Tauri
+         webview and any browser without a cutout/status bar to account for. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>TRN Black Pearl Control</title>
     <meta name="description" content="DAC control panel for the TRN Black Pearl (TE-C) — volume, EQ, mic gain, and more." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

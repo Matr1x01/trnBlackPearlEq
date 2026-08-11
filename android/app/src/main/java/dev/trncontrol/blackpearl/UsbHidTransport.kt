@@ -46,6 +46,10 @@ class UsbHidTransport private constructor(
     /** Reused across reads; only the read loop touches it. */
     private val readBuffer = ByteArray(REPORT_SIZE)
 
+    /** Diagnostic only: lets read() log a heartbeat instead of flooding
+     *  logcat, since the Go side polls this every ~250ms indefinitely. */
+    private var consecutiveTimeouts = 0
+
     /**
      * Sends one report. Failure here means the device is genuinely gone --
      * the Go layer reacts by tearing the connection down, so this must not
@@ -76,6 +80,13 @@ class UsbHidTransport private constructor(
             )
         }
 
+        // cmd is p[2] per the 64-byte report layout (ReportID, Type, Command,
+        // ...) -- see Doc.md. Logged unconditionally: writes are rare
+        // (user-triggered), unlike the read poll loop below.
+        val cmd = if (p.size >= 3) "0x%02X".format(p[2]) else "?"
+        val path = if (out != null) "bulk(out=${out.address})" else "control(SET_REPORT)"
+        Log.d(TAG, "write: cmd=$cmd via $path -> sent=$sent of ${p.size} bytes")
+
         if (sent < 0) throw IOException("USB write failed (device detached?)")
     }
 
@@ -98,7 +109,21 @@ class UsbHidTransport private constructor(
         // negative result is reported as a timeout. Real disconnects are
         // caught on the write path and, more reliably, by the DETACHED
         // broadcast -- neither depends on this guess.
-        if (n <= 0) return EMPTY
+        if (n <= 0) {
+            consecutiveTimeouts++
+            // One line roughly every 5s (20 * 250ms) while nothing arrives,
+            // instead of ~4 lines/sec forever -- enough to prove the read
+            // loop is alive and still getting nothing back from this
+            // endpoint, without drowning the write/success lines around it.
+            if (consecutiveTimeouts % 20 == 1) {
+                Log.d(TAG, "read: no data on in=${endpointIn.address} ($consecutiveTimeouts consecutive timeouts)")
+            }
+            return EMPTY
+        }
+        consecutiveTimeouts = 0
+        val reportId = "0x%02X".format(readBuffer[0])
+        val cmd = if (n >= 3) "0x%02X".format(readBuffer[2]) else "?"
+        Log.d(TAG, "read: $n bytes on in=${endpointIn.address}, reportId=$reportId, cmd=$cmd")
         return readBuffer.copyOf(n)
     }
 

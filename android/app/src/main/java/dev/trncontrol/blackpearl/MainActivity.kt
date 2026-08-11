@@ -2,13 +2,18 @@ package dev.trncontrol.blackpearl
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebChromeClient.FileChooserParams
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import dev.trncontrol.backend.mobile.Logger
 import dev.trncontrol.backend.mobile.Mobile
@@ -30,6 +35,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var usb: DacConnectionManager
     private var port: Int = 0
+
+    // Backs WebChromeClient.onShowFileChooser (import preset). Must be
+    // registered unconditionally as a field -- ActivityResultContracts
+    // require registration before STARTED, so this cannot move into
+    // onCreate.
+    private var filePickerCallback: ValueCallback<Array<Uri>>? = null
+    private val filePickerLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            filePickerCallback?.onReceiveValue(uri?.let { arrayOf(it) })
+            filePickerCallback = null
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +75,13 @@ class MainActivity : AppCompatActivity() {
         }
         setContentView(webView)
         configureWebView()
+
+        // Android 15's targetSdk enforces edge-to-edge with no opt-out, so
+        // without this the page content would draw under the status/nav
+        // bars. Handled in CSS instead of here: see the safe-area-inset-top
+        // rule on .app-header in App.css and the viewport-fit=cover meta tag
+        // in index.html. Native View padding on the WebView was tried first
+        // and did not reliably apply; env() in CSS does.
 
         usb = DacConnectionManager(this) { connected ->
             Log.i(TAG, "DAC connected=$connected")
@@ -133,6 +156,24 @@ class MainActivity : AppCompatActivity() {
                 val host = request.url.host ?: return false
                 if (host == "127.0.0.1" || host == "localhost") return false
                 startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                return true
+            }
+        }
+        webView.webChromeClient = object : WebChromeClient() {
+            // Backs the frontend's "Import" button (a hidden <input
+            // type="file">, see PresetGallery.tsx) -- without this override
+            // the WebView silently no-ops on a file input click, since a
+            // plain WebView has no default UI for it.
+            override fun onShowFileChooser(
+                view: WebView,
+                callback: ValueCallback<Array<Uri>>,
+                params: FileChooserParams,
+            ): Boolean {
+                filePickerCallback?.onReceiveValue(null)
+                filePickerCallback = callback
+                val mime = params.acceptTypes.firstOrNull { it.contains('/') }
+                    ?: "application/json"
+                filePickerLauncher.launch(mime)
                 return true
             }
         }

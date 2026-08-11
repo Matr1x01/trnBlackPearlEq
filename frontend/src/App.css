@@ -22,6 +22,11 @@
   flex-wrap: wrap;
   gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3);
+  /* Clears the status bar in the Android WebView, which draws edge-to-edge
+     with no opt-out on Android 15+. env() falls back to 0 anywhere without
+     a real inset (desktop, browsers), so this is a no-op there -- see the
+     viewport-fit=cover note in index.html. */
+  padding-top: max(var(--sp-2), env(safe-area-inset-top, 0px));
   flex-shrink: 0;
   background: rgba(13, 14, 17, 0.9);
   backdrop-filter: blur(16px);
