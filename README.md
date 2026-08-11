@@ -48,7 +48,7 @@ Don't want to build from source? Download a ready-to-run build:
 
 | Platform | Download |
 |---|---|
-| 🐧 Linux (Debian/Ubuntu) | [Download .deb](<builds/TRN Black Pearl Control_0.1.0_amd64.deb>) |
+| 🐧 Linux (Debian/Ubuntu) | [Download .deb](<builds/TRN Black Pearl Control_0.1.1_amd64.deb>) |
 | 🪟 Windows | [Download .exe](<builds/TRN Black Pearl Control_0.1.0_x64-setup.exe>) |
 
 Both are the current `v0.1.0` build.
