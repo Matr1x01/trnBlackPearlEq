@@ -51,6 +51,23 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/events", s.HandleEvents)
 }
 
+// WithCORS allows a webview that serves the frontend from a different
+// origin (tauri://, or a custom scheme depending on platform) to call the
+// loopback API. The Android shell serves the UI from this same server, so
+// there it is same-origin and these headers are inert.
+func WithCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)

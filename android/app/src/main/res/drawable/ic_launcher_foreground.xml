@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The ◈ mark from the app header, as an adaptive-icon foreground.
+
+  108dp canvas with a 72dp safe zone, so everything is kept inside roughly
+  18dp..90dp - the launcher masks and parallaxes whatever falls outside.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer diamond -->
+    <path
+        android:pathData="M54,26 L82,54 L54,82 L26,54 Z"
+        android:strokeColor="#FF2F45"
+        android:strokeWidth="5"
+        android:strokeLineJoin="round" />
+
+    <!-- Inner diamond, filled -->
+    <path
+        android:pathData="M54,42 L66,54 L54,66 L42,54 Z"
+        android:fillColor="#FF2F45" />
+</vector>

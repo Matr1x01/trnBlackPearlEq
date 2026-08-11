@@ -1,7 +1,36 @@
-// Client for the Go sidecar's local API. The sidecar always binds to
-// 127.0.0.1 on a fixed port (see backend/main.go and
-// src-tauri/src/main.rs -- keep BACKEND_PORT in sync if you change it).
-const BASE = "http://127.0.0.1:47823";
+// Client for the Go sidecar's local API.
+//
+// Desktop: the sidecar binds 127.0.0.1 on a fixed port (see backend/main.go
+// and src-tauri/src/main.rs -- keep BACKEND_PORT in sync if you change it),
+// and the UI is served from a different origin, so calls are absolute.
+//
+// Android: the backend picks a free port at runtime and serves this UI
+// itself, so the API is same-origin and calls must be relative. The shell
+// says so explicitly with `?api=same-origin` rather than leaving us to infer
+// it from the port, which would be guesswork.
+const DESKTOP_BASE = "http://127.0.0.1:47823";
+
+function resolveApiBase(): string {
+  // Escape hatch for embedders that know better than either default,
+  // e.g. pointing a phone on the LAN at a desktop's backend.
+  const override = (globalThis as any).__TRN_API_BASE__;
+  if (typeof override === "string") return override;
+
+  if (typeof location !== "undefined") {
+    const params = new URLSearchParams(location.search);
+    if (params.get("api") === "same-origin") return "";
+  }
+  return DESKTOP_BASE;
+}
+
+const BASE = resolveApiBase();
+
+/** ws:// or wss:// counterpart of BASE, including the empty same-origin case. */
+function wsBase(): string {
+  if (BASE) return BASE.replace(/^http/, "ws");
+  const scheme = location.protocol === "https:" ? "wss:" : "ws:";
+  return `${scheme}//${location.host}`;
+}
 
 export type FilterMode = "fast-ll" | "fast-pc" | "slow-ll" | "slow-pc" | "nos";
 export type GainMode = "low" | "high";
@@ -126,7 +155,7 @@ export type DeviceEvent = { type: "volume"; percent: number; db: number };
 
 /** Subscribes to hardware-originated changes (e.g. physical volume buttons). */
 export function subscribeEvents(onEvent: (ev: DeviceEvent) => void): () => void {
-  const ws = new WebSocket(`ws://127.0.0.1:47823/api/events`);
+  const ws = new WebSocket(`${wsBase()}/api/events`);
   ws.onmessage = (msg) => {
     try {
       onEvent(JSON.parse(msg.data));

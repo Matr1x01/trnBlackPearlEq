@@ -12,8 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	hid "github.com/sstallion/go-hid"
-
 	"trncontrol/api"
 	"trncontrol/hidproto"
 	"trncontrol/presets"
@@ -27,12 +25,14 @@ func main() {
 	// Exit with the desktop shell if we were launched by it.
 	watchParent()
 
-	if err := hid.Init(); err != nil {
+	if err := hidproto.InitHID(); err != nil {
 		log.Fatalf("hid init: %v", err)
 	}
-	defer hid.Exit()
+	defer hidproto.ExitHID()
 
-	dev := hidproto.NewDevice()
+	// On desktop the device layer discovers the DAC itself. Android has no
+	// hidraw access and pushes a transport in instead -- see backend/mobile.
+	dev := hidproto.NewDevice(hidproto.HIDOpener)
 	go connectLoop(dev)
 
 	// A broken or unreadable preset file must not stop the control
@@ -52,7 +52,7 @@ func main() {
 	// a known port; also handy when running the sidecar standalone.
 	fmt.Printf("READY %d\n", *port)
 
-	if err := http.ListenAndServe(addr, withCORS(srv.Handler())); err != nil {
+	if err := http.ListenAndServe(addr, api.WithCORS(srv.Handler())); err != nil {
 		log.Fatalf("http server: %v", err)
 	}
 }
@@ -71,20 +71,4 @@ func connectLoop(dev *hidproto.Device) {
 		}
 		time.Sleep(2 * time.Second)
 	}
-}
-
-// withCORS allows the Tauri webview (which may serve the frontend
-// from a tauri:// or custom origin depending on platform) to call the
-// loopback API.
-func withCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

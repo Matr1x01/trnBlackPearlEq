@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The UI is entirely WebView, so the theme only needs to make the
+         window match the page's background: any lighter default shows as a
+         flash before the first paint. -->
+    <style name="Theme.BlackPearl" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bg_chassis</item>
+        <item name="android:statusBarColor">@color/bg_chassis</item>
+        <item name="android:navigationBarColor">@color/bg_chassis</item>
+        <item name="colorAccent">@color/accent</item>
+    </style>
+</resources>

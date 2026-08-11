@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mirrors the tokens in frontend/src/index.css so the native chrome and
+     the web UI are the same colour. -->
+<resources>
+    <color name="bg_chassis">#FF08090B</color>
+    <color name="accent">#FFFF2F45</color>
+    <color name="ic_launcher_background">#FF08090B</color>
+</resources>
