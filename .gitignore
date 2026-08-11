@@ -55,6 +55,7 @@ vendor/
 /src-tauri/icons/android/
 /src-tauri/icons/ios/
 /target/
+/android
 
 # Packaged installers. These live under src-tauri/target/ already, but
 # the patterns stop a copy left elsewhere in the tree from being added.

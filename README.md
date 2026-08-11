@@ -49,9 +49,10 @@ Don't want to build from source? Download a ready-to-run build:
 | Platform | Download |
 |---|---|
 | 🐧 Linux (Debian/Ubuntu) | [Download .deb](<builds/TRN Black Pearl Control_0.1.1_amd64.deb>) |
-| 🪟 Windows | [Download .exe](<builds/TRN Black Pearl Control_0.1.0_x64-setup.exe>) |
+| 🪟 Windows | [Download .exe](<builds/TRN Black Pearl Control_0.1.1_x64-setup.exe>) |
+| 🤖 Android | [Download .apk](<builds/TRN Black Pearl Control_0.1.1.apk>) |
 
-Both are the current `v0.1.0` build.
+All three are the current `v0.1.1` build.
 
 > [!NOTE]
 > Future releases will also be published on the [GitHub Releases](../../releases) page. Until
@@ -62,7 +63,7 @@ Both are the current `v0.1.0` build.
 **Linux (`.deb`)**
 
 ```bash
-sudo dpkg -i "builds/TRN Black Pearl Control_0.1.0_amd64.deb"
+sudo dpkg -i "builds/TRN Black Pearl Control_0.1.1_amd64.deb"
 sudo apt -f install   # pulls in any dependencies dpkg couldn't resolve on its own
 ```
 
@@ -82,6 +83,27 @@ applies whether you installed the package or built it yourself.
 The app isn't code-signed, so Windows SmartScreen will likely flag it as unrecognized the first
 time you run it. If you trust the file (or built it yourself), click **More info → Run anyway**
 to continue.
+
+**Android (`.apk`)**
+
+For using the DAC plugged straight into the phone over USB-C (OTG) instead of a desktop. This is
+a debug-signed build, not a Play Store release, so:
+
+1. Download the `.apk` on the phone (or copy it over and open it from a file manager).
+2. Tap it to install. Android will block this the first time with an "unknown apps" warning —
+   follow the prompt to **Settings** and allow installs from whichever app you opened it with.
+3. Google Play Protect may also flag it as unrecognized; choose **Install anyway** if you trust
+   the source.
+
+Or install over USB from a PC with `adb`:
+
+```bash
+adb install -r "builds/TRN Black Pearl Control_0.1.1.apk"
+```
+
+The DAC needs a USB-C OTG adapter/cable, since it occupies the phone's only port. On first plug-in
+Android should offer to open the app automatically; tick "use by default" to stop the repeat
+prompt.
 
 Prefer to build it yourself, audit the code first, or need a platform without a prebuilt
 package? See [Building from Source](#building-from-source) below.
