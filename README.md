@@ -74,6 +74,16 @@ Either way, USB HID access still needs the one-time udev rule covered in
 [Prerequisites](#prerequisites) below — that's a hardware permission, not a build step, so it
 applies whether you installed the package or built it yourself.
 
+**Linux (Arch, CachyOS, and other non-Debian distros)**
+
+There is no `.deb` path here — `dpkg` isn't the system package manager. Build the AppImage
+from source instead (see [Building the desktop app](#building-the-desktop-app-linux)) and run
+it directly; no installation step is needed.
+
+The udev rule in [Prerequisites](#prerequisites) is still required. `uaccess` is handled by
+systemd-logind, so no `plugdev` group membership is needed — just reload the rules and
+replug the DAC.
+
 **Windows (`.exe`)**
 
 1. Download the installer above.
@@ -329,6 +339,22 @@ For live development with hot reload, use `cargo tauri dev` instead.
 > `cargo tauri build` also targets AppImage, which downloads tooling from GitHub at
 > build time. If that download times out, build just the Debian package with
 > `cargo tauri build --bundles deb`.
+
+> [!IMPORTANT]
+> **Arch-based distros:** the AppImage build fails with `failed to run linuxdeploy` unless
+> stripping is disabled:
+>
+> ```bash
+> NO_STRIP=1 cargo tauri build --bundles appimage
+> ```
+>
+> `linuxdeploy` bundles a 2024 binutils `strip` that rejects the `.relr.dyn` sections
+> (`unknown type [0x13]`) that current Arch system libraries are built with, so it fails on
+> every library it copies. Skipping the strip step only costs bundle size.
+>
+> Note that AppImageLauncher, if installed, **moves** an AppImage into `~/appimages/` the
+> first time you run it — so the file disappears from `target/release/bundle/appimage/`.
+> Copy it somewhere before launching it if you want to keep it in place.
 
 ---
 

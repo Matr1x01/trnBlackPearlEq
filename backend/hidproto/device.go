@@ -3,6 +3,7 @@ package hidproto
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -104,6 +105,19 @@ func (d *Device) broadcastVolume(ev VolumeEvent) {
 	}
 }
 
+// interrupted reports whether err is a signal-interrupted syscall
+// (EINTR) rather than a device failure.
+//
+// hidapi's blocking poll()/read()/write() run inside a cgo call, where
+// the Go runtime's asynchronous preemption (SIGURG) interrupts them.
+// The device is still there and the correct response is to retry -- but
+// go-hid surfaces only hidapi's strerror() text, with no errno to test,
+// so the message is all there is to match on. Go never calls setlocale,
+// so strerror stays in the C locale.
+func interrupted(err error) bool {
+	return err != nil && strings.Contains(strings.ToLower(err.Error()), "interrupted")
+}
+
 // send writes a single 64-byte report. Safe for concurrent use.
 func (d *Device) send(pkt []byte) error {
 	d.writeMu.Lock()
@@ -114,8 +128,18 @@ func (d *Device) send(pkt []byte) error {
 	}
 	// go-hid's Write expects the report ID as buf[0], matching our
 	// packet layout already.
-	_, err := dev.Write(pkt)
-	if err != nil {
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		if _, err = dev.Write(pkt); err == nil {
+			return nil
+		}
+		// An interrupted write never reached the device, so resend it
+		// rather than reporting a failure the caller can't act on.
+		if !interrupted(err) {
+			break
+		}
+	}
+	if err != nil && !interrupted(err) {
 		// A write failure (as opposed to a read timeout) means the
 		// device is gone -- drop the handle immediately so IsOpen()
 		// reflects reality and connectLoop retries, rather than
@@ -153,7 +177,7 @@ func (d *Device) readLoop(dev *hid.Device, stop chan struct{}) {
 		default:
 		}
 		n, err := dev.ReadWithTimeout(buf, 250*time.Millisecond)
-		if err == hid.ErrTimeout {
+		if err == hid.ErrTimeout || interrupted(err) {
 			continue
 		}
 		if err != nil {
